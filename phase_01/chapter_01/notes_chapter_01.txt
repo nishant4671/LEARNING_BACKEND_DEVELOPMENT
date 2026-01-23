@@ -1,0 +1,723 @@
+````md
+# CHAPTER 1 — PYTHON FUNDAMENTALS & SYNTAX (Industrial Training Notes)
+> Goal: Become fluent in writing Python scripts + understand how Python actually behaves internally (enough to write production-grade backend code later).
+
+---
+
+## 1.1 Setup & First Program
+
+### ✅ 1.1.1 Installing Python (What matters in Industry)
+When you install Python, you are installing:
+- **Python Interpreter** → the program that runs `.py` files
+- **Standard Library** → built-in modules like `os`, `sys`, `math`, `datetime`, etc.
+- **pip** → package installer (used to install external libraries)
+- **venv** → virtual environment tool (isolates project dependencies)
+
+#### Check Python version
+```bash
+python --version
+````
+
+⚠️ On Windows sometimes Python is:
+
+```bash
+py --version
+```
+
+#### Check pip version
+
+```bash
+pip --version
+```
+
+---
+
+### ✅ 1.1.2 How Python Runs Code (Important Mental Model)
+
+Python is an **interpreted language**, but internally:
+
+1. Your source code (`.py`) is compiled into **bytecode** (`.pyc`)
+2. Bytecode is executed by the **Python Virtual Machine (PVM)**
+
+That’s why Python feels interpreted, but there is still compilation happening.
+
+---
+
+### ✅ 1.1.3 Your First Python Program
+
+Create file:
+
+```bash
+notepad hello.py
+```
+
+Write:
+
+```python
+print("Hello, World!")
+```
+
+Run:
+
+```bash
+python hello.py
+```
+
+---
+
+### ✅ 1.1.4 Understanding `print()`
+
+`print()` is a **function** that outputs text to the console.
+
+```python
+print("Hello")
+print("World")
+```
+
+It automatically adds a newline.
+
+#### Changing separator
+
+```python
+print("Python", "Django", "Backend", sep=" | ")
+# Output: Python | Django | Backend
+```
+
+#### Changing line ending
+
+```python
+print("Hello", end=" ")
+print("World")
+# Output: Hello World
+```
+
+#### Printing variables
+
+```python
+name = "Nishant"
+age = 19
+print(name, age)
+```
+
+---
+
+### ✅ 1.1.5 Comments (Extremely Important)
+
+Comments are ignored by Python.
+
+#### Single line comment
+
+```python
+# This is a comment
+```
+
+#### Multi-line comment / docstring
+
+```python
+"""
+This is a multi-line comment.
+Used a lot for documentation.
+"""
+```
+
+✅ In real projects, triple quotes are used for:
+
+* documenting modules
+* documenting classes / functions
+
+---
+
+### ✅ 1.1.6 Indentation (Python’s Biggest Rule)
+
+Python uses indentation (spaces) instead of `{}` blocks.
+
+Correct:
+
+```python
+if True:
+    print("Yes")
+```
+
+Wrong:
+
+```python
+if True:
+print("Yes")  # IndentationError
+```
+
+Industry standard: **4 spaces** (not tabs)
+
+---
+
+## 1.2 Variables & Data Types
+
+### ✅ 1.2.1 What is a Variable?
+
+A variable is a **name that points to an object in memory**.
+
+```python
+x = 10
+```
+
+✅ `x` is not a box.
+✅ `x` is a label pointing to an object `10`.
+
+---
+
+### ✅ 1.2.2 Naming Rules (Professional Standard)
+
+Valid:
+
+```python
+name = "Nishant"
+user_age = 19
+is_active = True
+```
+
+Invalid:
+
+```python
+2name = "wrong"
+user-age = 19
+class = "reserved keyword"
+```
+
+Python Keywords:
+
+```python
+import keyword
+print(keyword.kwlist)
+```
+
+✅ Naming convention:
+
+* variables: `snake_case`
+* constants: `UPPER_CASE`
+* classes: `PascalCase`
+
+---
+
+### ✅ 1.2.3 Data Types in Python (Core)
+
+Python has dynamic typing.
+
+```python
+x = 10       # int
+x = "ten"    # str
+```
+
+But Python is also **strongly typed**:
+
+```python
+x = "10"
+y = 5
+# print(x + y)  # TypeError
+```
+
+---
+
+### ✅ 1.2.4 Primitive/Built-in Types
+
+#### Integer (`int`)
+
+```python
+a = 10
+b = -99
+```
+
+#### Float (`float`)
+
+```python
+pi = 3.14159
+```
+
+⚠️ Floating numbers can have precision issues:
+
+```python
+print(0.1 + 0.2)  # 0.30000000000000004
+```
+
+#### Boolean (`bool`)
+
+```python
+is_admin = True
+is_blocked = False
+```
+
+Truthiness rules:
+
+```python
+bool(0)      # False
+bool("")     # False
+bool([])     # False
+bool(None)   # False
+bool(10)     # True
+```
+
+#### String (`str`)
+
+```python
+name = "Nishant"
+msg = 'Hello'
+multi = """This is
+multi line"""
+```
+
+Strings are **immutable**.
+
+---
+
+### ✅ 1.2.5 Checking Type
+
+```python
+x = 10
+print(type(x))   # <class 'int'>
+```
+
+---
+
+### ✅ 1.2.6 Type Conversion (Casting)
+
+```python
+x = "10"
+y = int(x)       # 10
+z = float(x)     # 10.0
+```
+
+⚠️ Danger:
+
+```python
+int("10.5")  # ValueError
+```
+
+---
+
+### ✅ 1.2.7 Input/Output
+
+```python
+name = input("Enter your name: ")
+print("Hello", name)
+```
+
+✅ Important: `input()` ALWAYS returns string.
+
+```python
+age = input("Enter age: ")
+print(type(age))  # str
+```
+
+Convert it:
+
+```python
+age = int(input("Enter age: "))
+```
+
+---
+
+### ✅ 1.2.8 `None` Type
+
+`None` means "no value"
+
+```python
+x = None
+print(type(x))  # NoneType
+```
+
+Used in backend:
+
+* missing fields
+* optional values
+* no result
+
+---
+
+### ✅ 1.2.9 Memory Identity (Advanced but useful)
+
+```python
+a = 10
+b = 10
+print(id(a), id(b))
+```
+
+Small integers are cached in Python (implementation detail).
+
+---
+
+## 1.3 Operators & Control Flow
+
+### ✅ 1.3.1 Arithmetic Operators
+
+```python
+a = 10
+b = 3
+print(a + b)  # 13
+print(a - b)  # 7
+print(a * b)  # 30
+print(a / b)  # 3.333...
+print(a // b) # 3 (floor division)
+print(a % b)  # 1 (remainder)
+print(a ** b) # 1000 (power)
+```
+
+---
+
+### ✅ 1.3.2 Comparison Operators
+
+```python
+print(10 == 10)  # True
+print(10 != 5)   # True
+print(10 > 5)    # True
+print(10 < 5)    # False
+print(10 >= 10)  # True
+print(10 <= 9)   # False
+```
+
+---
+
+### ✅ 1.3.3 Logical Operators
+
+```python
+x = True
+y = False
+
+print(x and y)
+print(x or y)
+print(not x)
+```
+
+✅ Important truth tables:
+
+* `and` returns True only if both True
+* `or` returns True if at least one True
+* `not` flips
+
+⚠️ Python logical operators return actual values, not always True/False:
+
+```python
+print("" or "fallback")   # "fallback"
+print("a" and "b")        # "b"
+```
+
+---
+
+### ✅ 1.3.4 Assignment Operators
+
+```python
+x = 10
+x += 5   # x = x + 5
+x -= 2
+x *= 3
+x /= 2
+x //= 2
+x %= 2
+```
+
+---
+
+### ✅ 1.3.5 Membership Operators
+
+```python
+fruits = ["apple", "banana"]
+print("apple" in fruits)      # True
+print("grape" not in fruits)  # True
+```
+
+Used a LOT in backend validations.
+
+---
+
+### ✅ 1.3.6 Identity Operators (VERY IMPORTANT)
+
+```python
+a = [1, 2]
+b = [1, 2]
+print(a == b)  # True (same values)
+print(a is b)  # False (different objects)
+```
+
+✅ `==` checks value equality
+✅ `is` checks memory identity
+
+---
+
+### ✅ 1.3.7 Conditional Statements
+
+Basic:
+
+```python
+age = 18
+if age >= 18:
+    print("Adult")
+```
+
+If-elif-else:
+
+```python
+marks = 80
+if marks >= 90:
+    print("A+")
+elif marks >= 75:
+    print("A")
+else:
+    print("B")
+```
+
+Nested:
+
+```python
+x = 10
+if x > 0:
+    if x % 2 == 0:
+        print("Positive even")
+```
+
+---
+
+### ✅ 1.3.8 Loops
+
+#### `for` loop
+
+```python
+for i in range(5):
+    print(i)
+```
+
+`range(start, stop, step)`:
+
+```python
+for i in range(1, 10, 2):
+    print(i)
+```
+
+#### `while` loop
+
+```python
+x = 5
+while x > 0:
+    print(x)
+    x -= 1
+```
+
+---
+
+### ✅ 1.3.9 `break`, `continue`, `pass`
+
+`break` exits loop:
+
+```python
+for i in range(10):
+    if i == 5:
+        break
+    print(i)
+```
+
+`continue` skips current iteration:
+
+```python
+for i in range(5):
+    if i == 2:
+        continue
+    print(i)
+```
+
+`pass` does nothing (placeholder):
+
+```python
+if True:
+    pass
+```
+
+---
+
+## 1.4 Basic Data Structures
+
+### ✅ 1.4.1 Lists (`list`)
+
+Lists are:
+✅ Ordered
+✅ Mutable
+✅ Can store mixed types
+
+```python
+nums = [1, 2, 3]
+mixed = [1, "hello", True, 5.5]
+```
+
+#### Indexing
+
+```python
+fruits = ["apple", "banana", "cherry"]
+print(fruits[0])   # apple
+print(fruits[-1])  # cherry
+```
+
+#### Slicing
+
+```python
+print(fruits[0:2])  # apple, banana
+print(fruits[:2])   # apple, banana
+print(fruits[1:])   # banana, cherry
+```
+
+#### Modifying
+
+```python
+fruits[1] = "mango"
+```
+
+#### Adding
+
+```python
+fruits.append("orange") # add to end
+```
+
+#### Removing
+
+```python
+fruits.pop()       # removes last
+fruits.pop(1)      # removes by index
+fruits.remove("apple")  # removes by value
+```
+
+#### Sorting
+
+```python
+nums = [3, 1, 2]
+nums.sort()           # modifies list
+print(nums)           # [1,2,3]
+```
+
+Sorted copy:
+
+```python
+nums = [3, 1, 2]
+print(sorted(nums))   # [1,2,3]
+print(nums)           # unchanged
+```
+
+#### `extend()` vs `append()`
+
+```python
+fruits = ["apple", "banana"]
+
+fruits.append(["elderberry", "fig"])
+print(fruits)
+# ['apple', 'banana', ['elderberry', 'fig']]  <-- nested list
+
+fruits = ["apple", "banana"]
+fruits.extend(["elderberry", "fig"])
+print(fruits)
+# ['apple', 'banana', 'elderberry', 'fig']    <-- merged items
+```
+
+---
+
+### ✅ 1.4.2 Tuples (`tuple`)
+
+Tuples are:
+✅ Ordered
+✅ Immutable
+✅ Faster than lists sometimes
+✅ Used for fixed records and keys
+
+```python
+point = (10, 20)
+```
+
+Access:
+
+```python
+print(point[0])
+```
+
+Tuple unpacking:
+
+```python
+x, y = point
+print(x, y)
+```
+
+---
+
+### ✅ 1.4.3 Dictionaries (`dict`)
+
+Dictionaries store:
+✅ Key-Value pairs
+✅ Fast lookup (hash table)
+
+```python
+student = {
+    "name": "Nishant",
+    "age": 19,
+    "skills": ["Python", "Django"]
+}
+```
+
+Access:
+
+```python
+print(student["name"])
+```
+
+Safe access:
+
+```python
+print(student.get("city", "Not Found"))
+```
+
+Add/update:
+
+```python
+student["age"] = 20
+student["city"] = "Delhi"
+```
+
+Delete:
+
+```python
+del student["city"]
+```
+
+Looping:
+
+```python
+for key, value in student.items():
+    print(key, value)
+```
+
+---
+
+### ✅ 1.4.4 Sets (`set`)
+
+Sets are:
+✅ Unordered
+✅ Unique values only
+✅ Very useful for deduplication & membership tests
+
+```python
+nums = {1, 2, 3, 3, 2}
+print(nums)  # {1,2,3}
+```
+
+Add:
+
+```python
+nums.add(10)
+```
+
+Set operations:
+
+```python
+a = {1,2,3}
+b = {3,4,5}
+
+print(a | b)  # union
+print(a & b)  # intersection
+print(a - b)  # difference
+```
+
+---
+
+# ✅ End of Chapter 1 Notes (Industrial Standard)
+
+```
