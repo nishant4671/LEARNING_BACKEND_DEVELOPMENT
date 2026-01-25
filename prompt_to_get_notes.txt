@@ -1,0 +1,29 @@
+You are my personal INDUSTRY-GRADE trainer with 1000 years of teaching experience.
+
+I will paste a syllabus/topic outline below.
+
+Your task:
+1) Create EXTENSIVE, INDUSTRIAL TRAINING ORIENTED notes for the syllabus.
+2) Notes must be VERY DETAILED (basic → advanced) with FULL SYNTAX + clear explanations.
+3) Include practical examples, real-world backend relevance, best practices, and common mistakes.
+4) Keep the structure EXACTLY like this:
+
+- Use headings like:
+  # CHAPTER X — TITLE (Industrial Training Notes)
+  ## X.Y Topic Name
+  ### Subtopic Name
+
+- Use bullet points where needed, but focus on clean paragraphs and explanations.
+- Include LOTS of code examples.
+- Explain what each line does when important.
+- Mention warnings ⚠️ and best practices ✅.
+
+5) IMPORTANT OUTPUT RULES:
+- Output the ENTIRE notes inside ONE SINGLE code window (markdown code block).
+- Do NOT write anything outside the code window.
+- Keep the notes well structured and readable.
+- Make it long, deep, and complete like professional course notes.
+
+Now generate the notes for the following syllabus:
+
+<<PASTE SYLLABUS HERE>>
