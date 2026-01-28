@@ -1,0 +1,67 @@
+What does self refer to inside a class's method?
+**Short answer:**
+`self` refers to the **current object (instance)** of the class.
+
+---
+
+### Slightly longer (interview-ready) explanation:
+
+> Inside a class method, `self` represents the **specific object that is calling the method**. It allows the method to access and modify that object’s attributes and other methods.
+
+---
+
+### Example
+
+```python
+class Person:
+    def __init__(self, name):
+        self.name = name
+
+    def greet(self):
+        print("Hello, my name is", self.name)
+```
+
+```python
+p1 = Person("Alice")
+p2 = Person("Bob")
+
+p1.greet()
+p2.greet()
+```
+
+* When `p1.greet()` is called → `self` refers to `p1`
+* When `p2.greet()` is called → `self` refers to `p2`
+
+So:
+
+```python
+self.name
+```
+
+means:
+
+```python
+p1.name   # or p2.name, depending on caller
+```
+
+---
+
+### Important clarifications (very common confusion)
+
+* `self` is **not a keyword** (you could name it something else, but don’t)
+* Python **passes it automatically**
+* It links **methods to object data**
+
+---
+
+### Interview one-liner (perfect to memorize)
+
+> `self` refers to the instance of the class that is invoking the method, allowing access to its attributes and methods.
+
+If you want, I can also explain:
+
+* Why Python needs `self` but Java doesn’t
+* What happens internally when a method is called
+* How `self` differs from `cls`
+
+Just tell me 👍

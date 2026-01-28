@@ -1,0 +1,354 @@
+
+# **CHAPTER 3: OBJECT-ORIENTED PROGRAMMING (OOP) IN PYTHON**
+
+## **Objective**
+
+Model real-world problems using **classes and objects**, enabling clean, reusable, and scalable code.
+
+---
+
+## **Topic 3.1: Classes & Objects**
+
+### 🔹 What is OOP?
+
+Object-Oriented Programming is a way of structuring programs by **grouping data (attributes) and behavior (methods)** together into **objects**.
+
+Real-world analogy:
+
+* **Class** → Blueprint (Car)
+* **Object** → Actual thing (Your car)
+
+---
+
+### 🔹 Defining a Class
+
+```python
+class Person:
+    pass
+```
+
+* `class` keyword defines a class
+* Class names follow **PascalCase**
+
+---
+
+### 🔹 The `__init__` Method (Constructor)
+
+```python
+class Person:
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+```
+
+* Automatically runs when an object is created
+* `self` refers to the **current object**
+* Used to initialize **instance attributes**
+
+---
+
+### 🔹 Creating Objects (Instances)
+
+```python
+p1 = Person("Alice", 25)
+p2 = Person("Bob", 30)
+```
+
+Each object has **its own data**.
+
+---
+
+### 🔹 Instance Attributes vs Class Attributes
+
+#### Instance Attribute (unique per object)
+
+```python
+self.name
+self.age
+```
+
+#### Class Attribute (shared by all objects)
+
+```python
+class Person:
+    species = "Human"
+```
+
+Access:
+
+```python
+Person.species
+p1.species
+```
+
+---
+
+### 🔹 Instance Methods
+
+```python
+class Person:
+    def greet(self):
+        return f"Hello, my name is {self.name}"
+```
+
+* Must take `self` as first parameter
+* Operates on object data
+
+---
+
+## **Topic 3.2: Core OOP Principles**
+
+---
+
+## 🔐 Encapsulation
+
+### 🔹 What is Encapsulation?
+
+Encapsulation means **bundling data and methods together** and **restricting direct access** to internal details.
+
+Python uses **convention**, not strict enforcement.
+
+---
+
+### 🔹 Private Attributes (by convention)
+
+```python
+class Account:
+    def __init__(self, balance):
+        self._balance = balance
+```
+
+* `_balance` means: “Don’t access directly”
+* Still accessible, but discouraged
+
+---
+
+### 🔹 Controlled Access (Best Practice)
+
+```python
+class Account:
+    def __init__(self, balance):
+        self._balance = balance
+
+    def get_balance(self):
+        return self._balance
+```
+
+---
+
+## 🧬 Inheritance
+
+### 🔹 What is Inheritance?
+
+A child class **inherits properties and methods** from a parent class.
+
+---
+
+### 🔹 Basic Inheritance
+
+```python
+class Animal:
+    def speak(self):
+        print("Animal speaks")
+
+class Dog(Animal):
+    pass
+```
+
+```python
+d = Dog()
+d.speak()
+```
+
+---
+
+### 🔹 Using `super()`
+
+```python
+class Dog(Animal):
+    def __init__(self):
+        super().__init__()
+```
+
+* Calls the parent’s method
+* Avoids hardcoding parent class name
+
+---
+
+### 🔹 Method Overriding
+
+```python
+class Dog(Animal):
+    def speak(self):
+        print("Dog barks")
+```
+
+Child method **replaces** parent method.
+
+---
+
+## 🔄 Polymorphism
+
+### 🔹 What is Polymorphism?
+
+Same method name, **different behavior**, depending on the object.
+
+---
+
+### 🔹 Duck Typing (Python-style)
+
+```python
+class Bird:
+    def fly(self):
+        print("Flying")
+
+class Airplane:
+    def fly(self):
+        print("Flying with engines")
+```
+
+```python
+def make_it_fly(obj):
+    obj.fly()
+```
+
+Python doesn’t care about type — only behavior.
+
+---
+
+### 🔹 Polymorphism via Inheritance
+
+```python
+class Shape:
+    def area(self):
+        pass
+
+class Square(Shape):
+    def area(self):
+        return 4 * 4
+```
+
+---
+
+## **Topic 3.3: Advanced Class Concepts**
+
+---
+
+## 🏷️ Class Methods
+
+```python
+class Example:
+    count = 0
+
+    @classmethod
+    def increment(cls):
+        cls.count += 1
+```
+
+* Uses `cls`
+* Works on **class-level data**
+
+---
+
+## 🧊 Static Methods
+
+```python
+class MathUtils:
+    @staticmethod
+    def add(a, b):
+        return a + b
+```
+
+* No `self` or `cls`
+* Utility/helper methods
+
+---
+
+## 🪄 Property Decorators
+
+### 🔹 `@property` (getter)
+
+```python
+class Person:
+    def __init__(self, age):
+        self._age = age
+
+    @property
+    def age(self):
+        return self._age
+```
+
+Access like an attribute:
+
+```python
+p.age
+```
+
+---
+
+### 🔹 `@setter`
+
+```python
+    @age.setter
+    def age(self, value):
+        if value < 0:
+            raise ValueError("Invalid age")
+        self._age = value
+```
+
+---
+
+## 🧰 Dunder (Magic) Methods
+
+### 🔹 `__str__` (User-friendly)
+
+```python
+class Person:
+    def __str__(self):
+        return f"Person({self.name})"
+```
+
+Used by `print(obj)`
+
+---
+
+### 🔹 `__repr__` (Developer-friendly)
+
+```python
+class Person:
+    def __repr__(self):
+        return f"Person(name={self.name}, age={self.age})"
+```
+
+Used in debugging, consoles
+
+---
+
+## 🧠 Key Differences
+
+| Method     | Purpose          |
+| ---------- | ---------------- |
+| `__init__` | Object creation  |
+| `__str__`  | Readable output  |
+| `__repr__` | Debugging output |
+
+---
+
+## 🎯 Chapter 3 Takeaways
+
+* Classes model real-world entities
+* `__init__` initializes object state
+* Encapsulation protects internal data
+* Inheritance promotes code reuse
+* Polymorphism enables flexible behavior
+* Advanced features make APIs clean and safe
+
+---
+
+If you want next (same style):
+
+* **Chapter 4: Error Handling & Exceptions**
+* **Mini OOP project (Inventory / Bank / Student system)**
+* **OOP interview questions with answers**
+
+Just say the word 🚀
