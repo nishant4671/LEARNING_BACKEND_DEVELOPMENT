@@ -1,0 +1,16 @@
+Simple memory trick
+
+Instance method → uses self → one object
+
+Class method → uses cls → whole class
+
+Static method → uses nothing → just a utility
+
+Real-life idea:
+
+Instance method: “This student’s marks”
+
+Class method: “Change school name for all students”
+
+Static method: “Check if any marks are passing or not”
+
