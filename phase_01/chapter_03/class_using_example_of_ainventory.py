@@ -9,14 +9,20 @@
 
 
 class InventoryItem:
+    tax_rate = 0.18  # class attribute shared by all instances
     def __init__(self, name, quantity, price_per_unit, supplier_ids): #here the self means the instance of the class
         self.name = name #this is how you assign the parameters to instance attributes
         self.quantity = quantity #
         self.price_per_unit = price_per_unit
         self.supplier_ids = supplier_ids
+        
+        
 
         # widget_obj = InventoryItem("Widget", 100, 2.50, [101, 102, 103])
 
+    @classmethod
+    def update_tax(cls , new_rate):
+        cls.tax_rate = new_rate 
 
 
         # example how this really works 
@@ -42,6 +48,8 @@ item2 = InventoryItem("Gadget", 5, 10.0, ["SUP555"])
 item2.add_stock(3)
 print(item.quantity) # Output: 8
 print(item2.total_value()) # Output: 80.0
+
+InventoryItem.update_tax(0.20) #this is how we ggp about updating the tax rates 
 
 
 
