@@ -1,0 +1,2 @@
+# # What is the practical purpose of prefixing an attribute with _ (a single underscore) in Python?
+# A single underscore prefix in Python indicates that an attribute is intended for internal use and is part of a non-public API. It is a naming convention to communicate intent, not a mechanism for access control.
