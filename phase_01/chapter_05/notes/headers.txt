@@ -1,0 +1,1540 @@
+```markdown
+# CHAPTER 5.3 — HEADERS IN REQUESTS AND RESPONSES (Industrial Training Notes)
+
+## Introduction to HTTP Headers
+
+### What Are HTTP Headers?
+
+HTTP headers are **metadata components** of HTTP requests and responses that carry additional information about the message, the client, the server, and the resource being transferred. They function as **control and configuration directives** for the HTTP communication protocol.
+
+**Key Characteristics:**
+- **Key-value pairs** separated by colon (`Header-Name: value`)
+- **Case-insensitive** names (but conventionally use Title-Case)
+- Can appear in both **requests** (from client) and **responses** (from server)
+- Some headers are **end-to-end** (must be forwarded by proxies), others are **hop-by-hop** (only for single transport connection)
+
+**Industrial Analogy:** Headers are like shipping labels on packages - they tell carriers how to handle the package (fragile, refrigerated, priority) without containing the actual goods.
+
+## Header Categories and Classification
+
+### Standard Header Groups
+
+#### 1. **General Headers**
+Apply to both requests and responses, but are independent of the message body.
+
+```http
+Date: Tue, 15 Nov 2023 08:12:31 GMT
+Connection: keep-alive
+Cache-Control: no-cache
+Pragma: no-cache
+```
+
+#### 2. **Request Headers**
+Provide information about the client, target resource, and request preferences.
+
+```http
+GET /api/data HTTP/1.1
+Host: api.example.com
+User-Agent: Mozilla/5.0
+Accept: application/json
+Authorization: Bearer token123
+```
+
+#### 3. **Response Headers**
+Provide information about the server and the response.
+
+```http
+HTTP/1.1 200 OK
+Server: nginx/1.18.0
+Content-Type: application/json
+Content-Length: 2048
+Set-Cookie: session=abc123
+```
+
+#### 4. **Entity/Representation Headers**
+Describe the body content (formerly called entity headers).
+
+```http
+Content-Type: application/json
+Content-Length: 1024
+Content-Encoding: gzip
+Content-Language: en-US
+Last-Modified: Tue, 15 Nov 2023 07:28:00 GMT
+```
+
+## Core Request Headers (Industrial Deep Dive)
+
+### Essential Request Headers
+
+#### Host Header (REQUIRED in HTTP/1.1)
+```http
+Host: api.example.com:8080
+```
+- **Purpose**: Specifies the domain and optional port of the server
+- **Why required**: Allows multiple domains to share one IP address (virtual hosting)
+- **âš ï¸ Common Mistake**: Forgetting to include in HTTP/1.1 requests (will get 400 Bad Request)
+- **âœ… Best Practice**: Always include, even if using default port 80/443
+
+#### User-Agent
+```http
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 
+            (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36
+```
+- **Purpose**: Identifies the client application/device
+- **Industrial Uses**:
+  - Analytics and tracking
+  - Device-specific content delivery
+  - Bot detection and rate limiting
+  - Feature detection (browser capabilities)
+
+```javascript
+// Server-side user-agent parsing
+const userAgent = req.headers['user-agent'];
+
+if (userAgent.includes('Chrome')) {
+    // Send Chrome-optimized content
+} else if (userAgent.includes('Mobile')) {
+    // Send mobile-optimized content
+} else if (userAgent.includes('Googlebot')) {
+    // Handle search engine crawler
+}
+
+// âš ï¸ WARNING: User-Agent can be easily spoofed - don't rely for security!
+```
+
+#### Accept Headers Family
+```http
+Accept: application/json, text/html; q=0.9, application/xml; q=0.8
+Accept-Language: en-US, en; q=0.9, fr; q=0.7
+Accept-Encoding: gzip, deflate, br
+Accept-Charset: utf-8, iso-8859-1; q=0.5
+```
+
+**Quality Values (q-values)**: Indicate preference (1.0 = highest, 0.0 = unacceptable)
+
+```javascript
+// Server-side content negotiation
+app.get('/resource', (req, res) => {
+  const accepts = req.headers['accept'];
+  
+  if (accepts.includes('application/json')) {
+    res.json({ data: 'json response' });
+  } else if (accepts.includes('text/html')) {
+    res.send('<html>HTML response</html>');
+  } else if (accepts.includes('application/xml')) {
+    res.type('application/xml').send('<data>XML response</data>');
+  } else {
+    // Default to JSON (API best practice)
+    res.json({ data: 'default json' });
+  }
+});
+```
+
+#### Authorization
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+**Common Schemes:**
+- **Bearer**: JWT/OAuth tokens (most common for APIs)
+- **Basic**: `username:password` base64 encoded
+- **Digest**: Challenge-response authentication
+- **AWS4-HMAC-SHA256**: AWS signature
+
+```javascript
+// Industrial authentication middleware
+const authenticate = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Missing Authorization header' });
+  }
+  
+  const [scheme, token] = authHeader.split(' ');
+  
+  if (scheme.toLowerCase() !== 'bearer') {
+    return res.status(401).json({ error: 'Unsupported authentication scheme' });
+  }
+  
+  try {
+    const decoded = verifyJWT(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+};
+```
+
+#### Content-Type (for requests with body)
+```http
+Content-Type: application/json; charset=utf-8
+```
+**Common MIME Types:**
+- `application/json` - JSON data
+- `application/x-www-form-urlencoded` - Form data
+- `multipart/form-data` - File uploads
+- `text/plain`, `text/html`, `text/xml`
+- `application/octet-stream` - Binary data
+
+```javascript
+// Handling different content types
+app.post('/api/data', (req, res) => {
+  const contentType = req.headers['content-type'];
+  
+  if (!contentType) {
+    return res.status(400).json({ error: 'Content-Type header required' });
+  }
+  
+  if (contentType.includes('application/json')) {
+    // Express.json() middleware already parsed it
+    processJSON(req.body);
+  } else if (contentType.includes('multipart/form-data')) {
+    // Use multer or similar middleware
+    processFormData(req);
+  } else {
+    return res.status(415).json({ 
+      error: 'Unsupported Media Type',
+      supported: ['application/json', 'multipart/form-data']
+    });
+  }
+});
+```
+
+#### Content-Length
+```http
+Content-Length: 2048
+```
+- **Purpose**: Size of request body in bytes (octets)
+- **Required**: For requests with body (except chunked transfer encoding)
+- **âœ… Best Practice**: Always validate on server to prevent DoS attacks
+
+```javascript
+// Protect against oversized payloads
+app.use(express.json({ 
+  limit: '10mb',  // Reject bodies larger than 10MB
+  verify: (req, res, buf) => {
+    // Additional verification logic
+    const contentLength = req.headers['content-length'];
+    if (contentLength && parseInt(contentLength) > 10 * 1024 * 1024) {
+      throw new Error('Payload too large');
+    }
+  }
+}));
+```
+
+### Advanced Request Headers
+
+#### Cache-Control (Request Directive)
+```http
+Cache-Control: no-cache, max-age=0
+```
+**Request Directives:**
+- `max-age=<seconds>`: Maximum age of cached response client will accept
+- `no-cache`: Force revalidation with server
+- `no-store`: Don't use any cache
+- `only-if-cached`: Only return cached responses (504 if none)
+
+#### Conditional Requests
+```http
+If-None-Match: "abc123"
+If-Modified-Since: Tue, 15 Nov 2023 07:28:00 GMT
+If-Match: "xyz789"
+If-Unmodified-Since: Wed, 16 Nov 2023 08:00:00 GMT
+```
+**Use Cases:**
+- **Cache validation** (If-None-Match with ETag)
+- **Optimistic concurrency control** (If-Match for updates)
+- **Resource freshness checks**
+
+```javascript
+// Implementing conditional GET
+app.get('/resource/:id', async (req, res) => {
+  const resource = await db.getResource(req.params.id);
+  const etag = generateETag(resource);
+  
+  // Check If-None-Match header
+  const clientETag = req.headers['if-none-match'];
+  if (clientETag && clientETag === etag) {
+    return res.status(304).end(); // Not Modified
+  }
+  
+  // Check If-Modified-Since
+  const ifModifiedSince = req.headers['if-modified-since'];
+  if (ifModifiedSince && new Date(resource.updatedAt) <= new Date(ifModifiedSince)) {
+    return res.status(304).end();
+  }
+  
+  res.set('ETag', etag);
+  res.set('Last-Modified', resource.updatedAt.toUTCString());
+  res.json(resource);
+});
+```
+
+#### Range Requests (for partial content)
+```http
+Range: bytes=0-1023
+```
+**Format**: `bytes=start-end` (inclusive, 0-based)
+**Response**: `206 Partial Content` with `Content-Range` header
+
+```javascript
+// Implementing range requests for file downloads
+app.get('/download/:file', (req, res) => {
+  const filePath = path.join('uploads', req.params.file);
+  const stat = fs.statSync(filePath);
+  const fileSize = stat.size;
+  
+  const range = req.headers.range;
+  
+  if (range) {
+    const parts = range.replace(/bytes=/, "").split("-");
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    
+    const chunksize = (end - start) + 1;
+    const file = fs.createReadStream(filePath, { start, end });
+    
+    res.writeHead(206, {
+      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': chunksize,
+      'Content-Type': 'application/octet-stream'
+    });
+    
+    file.pipe(res);
+  } else {
+    // Full file download
+    res.writeHead(200, {
+      'Content-Length': fileSize,
+      'Content-Type': 'application/octet-stream'
+    });
+    fs.createReadStream(filePath).pipe(res);
+  }
+});
+```
+
+#### Forwarded Headers (Proxies/Load Balancers)
+```http
+X-Forwarded-For: 203.0.113.195, 70.41.3.18
+X-Forwarded-Proto: https
+X-Forwarded-Host: api.example.com
+X-Real-IP: 203.0.113.195
+```
+**Purpose**: Preserve original client information through proxies
+**âš ï¸ Security Warning**: These headers can be spoofed - validate/trust only from known proxies
+
+```javascript
+// Getting real client IP in production
+const getClientIP = (req) => {
+  // Check X-Forwarded-For (comma-separated list of proxies)
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (forwardedFor) {
+    // First IP in list is the original client
+    return forwardedFor.split(',')[0].trim();
+  }
+  
+  // Fallback to connection remote address
+  return req.connection.remoteAddress;
+};
+
+// âœ… Best Practice: Configure trusted proxies
+app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
+app.set('trust proxy', '192.168.1.100'); // Specific proxy IP
+app.set('trust proxy', 2); // Trust 2 hops of proxies
+```
+
+#### Custom Headers
+```http
+X-Request-ID: 550e8400-e29b-41d4-a716-446655440000
+X-API-Version: 2023-11-15
+X-Correlation-ID: req_abc123_def456
+```
+**Naming Convention**: Use `X-` prefix for non-standard headers (though being deprecated)
+**Industrial Uses**: Request tracing, versioning, feature flags
+
+```javascript
+// Request tracing middleware
+app.use((req, res, next) => {
+  // Generate or use provided request ID
+  const requestId = req.headers['x-request-id'] || uuidv4();
+  
+  // Attach to request and response
+  req.requestId = requestId;
+  res.setHeader('X-Request-ID', requestId);
+  
+  // Log with request ID for correlation
+  console.log(`[${requestId}] ${req.method} ${req.url}`);
+  
+  next();
+});
+
+// Propagate to downstream services
+app.get('/api/data', async (req, res) => {
+  const downstreamResponse = await fetch('https://internal-service/api', {
+    headers: {
+      'X-Request-ID': req.requestId,
+      'X-Correlation-ID': req.requestId
+    }
+  });
+  
+  // All logs can be correlated by request ID
+});
+```
+
+## Core Response Headers (Industrial Deep Dive)
+
+### Essential Response Headers
+
+#### Server
+```http
+Server: nginx/1.18.0 + Express/4.18.2
+```
+- **Purpose**: Identifies the server software
+- **âš ï¸ Security**: Consider omitting or using generic value in production to avoid exposing version information
+- **âœ… Best Practice**: 
+  ```javascript
+  // Express.js - minimal server header
+  app.disable('x-powered-by'); // Remove "X-Powered-By: Express"
+  // Or set custom
+  app.use((req, res, next) => {
+    res.setHeader('Server', 'Our API Server');
+    next();
+  });
+  ```
+
+#### Content-Type
+```http
+Content-Type: application/json; charset=utf-8
+Content-Type: text/html; charset=utf-8
+Content-Type: image/png
+```
+**Charset Consideration**: Always specify charset for text content to avoid encoding issues
+
+```javascript
+// Setting appropriate content types
+app.get('/api/users', (req, res) => {
+  res.type('application/json').json(users); // Sets Content-Type automatically
+});
+
+app.get('/download/report', (req, res) => {
+  res.type('application/pdf');
+  res.download('report.pdf');
+});
+
+app.get('/data.csv', (req, res) => {
+  res.type('text/csv; charset=utf-8');
+  res.attachment('data.csv'); // Sets Content-Disposition: attachment
+  res.send(csvData);
+});
+```
+
+#### Content-Length
+```http
+Content-Length: 2048
+```
+- **Purpose**: Size of response body in bytes
+- **Importance**: Allows client to know when transmission is complete
+- **Note**: Not needed for chunked transfer encoding
+
+```javascript
+// Setting Content-Length manually (usually automatic)
+app.get('/fixed-data', (req, res) => {
+  const data = JSON.stringify({ message: 'Hello' });
+  res.setHeader('Content-Length', Buffer.byteLength(data));
+  res.send(data);
+});
+```
+
+#### Cache-Control (Response Directive)
+```http
+Cache-Control: public, max-age=3600, s-maxage=7200
+Cache-Control: private, no-cache, no-store, must-revalidate
+Cache-Control: no-cache, max-age=0, must-revalidate
+```
+
+**Common Response Directives:**
+- `public`: Can be cached by any cache (CDNs, browsers)
+- `private`: Only user's browser can cache (not CDNs)
+- `max-age=<seconds>`: Maximum time resource is fresh
+- `s-maxage=<seconds>`: CDN-specific max-age
+- `no-store`: Don't cache at all
+- `no-cache`: Cache but revalidate on each use
+- `must-revalidate`: Must check with server when stale
+- `stale-while-revalidate`: Serve stale while revalidating
+- `stale-if-error`: Serve stale if revalidation fails
+
+```javascript
+// Industrial cache control strategies
+app.get('/static/:file', (req, res) => {
+  // Static assets - cache for 1 year
+  res.set('Cache-Control', 'public, max-age=31536000, immutable');
+  res.sendFile(`/static/${req.params.file}`);
+});
+
+app.get('/api/user/profile', authenticate, (req, res) => {
+  // Personal data - no cache or private cache
+  res.set('Cache-Control', 'private, no-cache');
+  res.json(userProfile);
+});
+
+app.get('/api/products', (req, res) => {
+  // Product catalog - cache for 5 minutes, revalidate after
+  res.set('Cache-Control', 'public, max-age=300, must-revalidate');
+  res.json(products);
+});
+
+app.get('/api/real-time-data', (req, res) => {
+  // Real-time data - no cache, immediate freshness
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  res.json(realTimeData);
+});
+```
+
+#### ETag
+```http
+ETag: "abc123"
+ETag: W/"xyz789"  # Weak ETag
+```
+- **Purpose**: Validation token for conditional requests
+- **Strong ETag**: Byte-for-byte identical (must match exactly)
+- **Weak ETag** (`W/`): Semantically identical (content same, headers may differ)
+
+```javascript
+// Generating and using ETags
+const generateETag = (data) => {
+  // Simple hash-based ETag
+  const hash = crypto.createHash('md5').update(JSON.stringify(data)).digest('hex');
+  return `"${hash}"`;
+};
+
+app.get('/api/resource/:id', async (req, res) => {
+  const resource = await db.getResource(req.params.id);
+  const etag = generateETag(resource);
+  
+  res.set('ETag', etag);
+  res.json(resource);
+});
+
+// Middleware for automatic ETag handling
+app.use((req, res, next) => {
+  const originalSend = res.send;
+  res.send = function(data) {
+    // Generate ETag for response data
+    if (data && typeof data === 'string') {
+      const etag = crypto.createHash('md5').update(data).digest('hex');
+      res.set('ETag', `"${etag}"`);
+    }
+    originalSend.call(this, data);
+  };
+  next();
+});
+```
+
+#### Vary
+```http
+Vary: Accept-Encoding, User-Agent
+Vary: *
+```
+- **Purpose**: Tells caches which request headers affect response
+- **Critical for**: Content negotiation, device-specific responses
+
+```javascript
+// Using Vary header correctly
+app.get('/content', (req, res) => {
+  const acceptLanguage = req.headers['accept-language'];
+  
+  if (acceptLanguage.includes('fr')) {
+    res.send('<p>Bonjour</p>');
+  } else {
+    res.send('<p>Hello</p>');
+  }
+  
+  // Tell caches: different Accept-Language = different response
+  res.set('Vary', 'Accept-Language');
+});
+
+app.get('/api/data', (req, res) => {
+  const apiVersion = req.headers['x-api-version'];
+  
+  // Different API versions return different formats
+  res.set('Vary', 'X-API-Version');
+  res.json({ data: 'version-specific' });
+});
+```
+
+#### Set-Cookie
+```http
+Set-Cookie: sessionId=abc123; HttpOnly; Secure; SameSite=Strict; Max-Age=3600
+Set-Cookie: cart=item1,item2; Path=/store; Expires=Wed, 22 Nov 2023 08:00:00 GMT
+```
+
+**Cookie Attributes Deep Dive:**
+
+1. **HttpOnly**: Prevent JavaScript access (XSS protection)
+   ```http
+   Set-Cookie: session=abc123; HttpOnly  # GOOD - secure
+   ```
+
+2. **Secure**: HTTPS only (always use in production)
+   ```http
+   Set-Cookie: session=abc123; Secure; HttpOnly  # BOTH required
+   ```
+
+3. **SameSite**: CSRF protection
+   - `Strict`: Never send cross-site (banking)
+   - `Lax`: Send with safe top-level navigation (default for modern browsers)
+   - `None`: Allow cross-site (requires Secure)
+   
+   ```http
+   Set-Cookie: session=abc123; SameSite=Strict; Secure; HttpOnly
+   ```
+
+4. **Max-Age vs Expires**:
+   ```http
+   Set-Cookie: temp=value; Max-Age=3600  # Seconds from now
+   Set-Cookie: perm=value; Expires=Wed, 22 Nov 2023 08:00:00 GMT  # Specific date
+   ```
+
+5. **Path and Domain**:
+   ```http
+   Set-Cookie: admin=yes; Path=/admin  # Only sent for /admin paths
+   Set-Cookie: global=yes; Domain=.example.com  # All subdomains
+   ```
+
+```javascript
+// Industrial cookie management
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+  maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  path: '/',
+  // domain: '.example.com' // Optional - for cross-subdomain
+};
+
+res.cookie('session', sessionToken, cookieOptions);
+res.cookie('xsrf-token', xsrfToken, { 
+  ...cookieOptions, 
+  httpOnly: false // Need JS access for XSRF protection
+});
+```
+
+### Security Response Headers (CRITICAL)
+
+#### Content Security Policy (CSP)
+```http
+Content-Security-Policy: default-src 'self'; script-src 'self' https://apis.google.com
+```
+**Purpose**: Prevent XSS attacks by controlling resource sources
+
+```javascript
+// Industrial CSP configuration
+const cspOptions = {
+  directives: {
+    defaultSrc: ["'self'"],
+    styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles
+    scriptSrc: ["'self'", "https://cdn.example.com"],
+    imgSrc: ["'self'", "data:", "https://*.example.com"],
+    fontSrc: ["'self'", "https://fonts.gstatic.com"],
+    connectSrc: ["'self'", "https://api.example.com"],
+    frameSrc: ["'none'"], // No iframes allowed
+    objectSrc: ["'none'"], // No Flash/Java
+    mediaSrc: ["'self'"],
+    frameAncestors: ["'none'"], // Prevent clickjacking
+    formAction: ["'self'"],
+    baseUri: ["'self'"],
+    reportUri: "/api/csp-violation-report" // Collect violation reports
+  }
+};
+
+// Apply CSP
+app.use(helmet.contentSecurityPolicy(cspOptions));
+```
+
+#### HTTP Strict Transport Security (HSTS)
+```http
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+```
+- **Purpose**: Force HTTPS, prevent SSL stripping attacks
+- `max-age`: Time in seconds browser should remember
+- `includeSubDomains`: Apply to all subdomains
+- `preload`: Include in browser's preload list
+
+**âš ï¸ Critical Warning**: Don't enable HSTS until you're sure your site works 100% with HTTPS
+
+```javascript
+// HSTS configuration (using Helmet.js)
+app.use(helmet.hsts({
+  maxAge: 31536000, // 1 year
+  includeSubDomains: true,
+  preload: true
+}));
+```
+
+#### X-Content-Type-Options
+```http
+X-Content-Type-Options: nosniff
+```
+- **Purpose**: Prevent MIME type sniffing attacks
+- **Effect**: Browser uses declared Content-Type, doesn't guess
+
+#### X-Frame-Options
+```http
+X-Frame-Options: DENY
+X-Frame-Options: SAMEORIGIN
+```
+- **Purpose**: Prevent clickjacking attacks
+- `DENY`: No iframes at all
+- `SAMEORIGIN`: Only same-origin iframes
+- **Modern alternative**: CSP `frame-ancestors` directive
+
+#### X-XSS-Protection
+```http
+X-XSS-Protection: 1; mode=block
+```
+- **Purpose**: Enable browser's XSS filter (legacy, use CSP instead)
+
+#### Referrer-Policy
+```http
+Referrer-Policy: strict-origin-when-cross-origin
+Referrer-Policy: no-referrer
+```
+**Options**: `no-referrer`, `no-referrer-when-downgrade`, `origin`, `origin-when-cross-origin`, `strict-origin`, `strict-origin-when-cross-origin`, `unsafe-url`
+
+```javascript
+// Complete security headers setup
+app.use(helmet({
+  contentSecurityPolicy: false, // Configure separately
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+  xFrameOptions: { action: 'deny' },
+  xContentTypeOptions: true,
+  xXssProtection: true,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  hidePoweredBy: true,
+  noSniff: true,
+  ieNoOpen: true,
+  permittedCrossDomainPolicies: { permittedPolicies: 'none' }
+}));
+```
+
+### Performance Headers
+
+#### Accept-Ranges
+```http
+Accept-Ranges: bytes
+Accept-Ranges: none
+```
+- **Purpose**: Indicates server supports range requests
+
+#### Timing-Allow-Origin
+```http
+Timing-Allow-Origin: *
+Timing-Allow-Origin: https://example.com
+```
+- **Purpose**: Allows cross-origin timing information (for performance monitoring)
+
+#### Early Hints (HTTP 103)
+```http
+HTTP/1.1 103 Early Hints
+Link: </style.css>; rel=preload; as=style
+Link: </script.js>; rel=preload; as=script
+```
+**Purpose**: Send hints about resources before full response
+
+```javascript
+// Experimental: Early hints in Node.js
+app.get('/page', (req, res) => {
+  // Send 103 Early Hints
+  res.writeEarlyHints({
+    link: [
+      '</style.css>; rel=preload; as=style',
+      '</script.js>; rel=preload; as=script'
+    ]
+  });
+  
+  // Later send full response
+  setTimeout(() => {
+    res.send('<html>...</html>');
+  }, 100);
+});
+```
+
+## Advanced Header Patterns and Techniques
+
+### Header Compression in HTTP/2
+
+HTTP/2 uses HPACK compression for headers, significantly reducing overhead:
+
+```javascript
+// HTTP/2 server with header compression
+const http2 = require('http2');
+const fs = require('fs');
+
+const server = http2.createSecureServer({
+  key: fs.readFileSync('server.key'),
+  cert: fs.readFileSync('server.crt')
+});
+
+server.on('stream', (stream, headers) => {
+  // Headers are automatically decompressed by HTTP/2
+  const method = headers[':method'];
+  const path = headers[':path'];
+  
+  // Response headers will be compressed
+  stream.respond({
+    ':status': 200,
+    'content-type': 'application/json',
+    'cache-control': 'public, max-age=3600'
+  });
+  
+  stream.end(JSON.stringify({ message: 'Hello HTTP/2' }));
+});
+```
+
+### Custom Header Validation Middleware
+
+```javascript
+// Industrial-grade header validation
+const validateHeaders = (req, res, next) => {
+  const errors = [];
+  
+  // 1. Required headers check
+  const requiredHeaders = {
+    'content-type': ['POST', 'PUT', 'PATCH'],
+    'user-agent': ['ALL'],
+    'accept': ['ALL']
+  };
+  
+  for (const [header, methods] of Object.entries(requiredHeaders)) {
+    if (methods.includes('ALL') || methods.includes(req.method)) {
+      if (!req.headers[header.toLowerCase()]) {
+        errors.push(`Missing required header: ${header}`);
+      }
+    }
+  }
+  
+  // 2. Content-Type validation
+  const contentType = req.headers['content-type'];
+  if (contentType && ['POST', 'PUT', 'PATCH'].includes(req.method)) {
+    const allowedTypes = [
+      'application/json',
+      'application/x-www-form-urlencoded',
+      'multipart/form-data'
+    ];
+    
+    if (!allowedTypes.some(type => contentType.includes(type))) {
+      errors.push(`Unsupported Content-Type: ${contentType}`);
+    }
+  }
+  
+  // 3. Size limits
+  const contentLength = parseInt(req.headers['content-length'] || '0');
+  if (contentLength > 10 * 1024 * 1024) { // 10MB
+    errors.push('Content-Length exceeds 10MB limit');
+  }
+  
+  // 4. Custom header format validation
+  const requestId = req.headers['x-request-id'];
+  if (requestId && !isValidUUID(requestId)) {
+    errors.push('X-Request-ID must be a valid UUID');
+  }
+  
+  if (errors.length > 0) {
+    return res.status(400).json({
+      error: 'Header validation failed',
+      details: errors
+    });
+  }
+  
+  next();
+};
+
+app.use(validateHeaders);
+```
+
+### Header Transformation for Proxies/APIs
+
+```javascript
+// API Gateway header transformation
+const transformHeaders = (incomingHeaders) => {
+  const outgoingHeaders = {};
+  
+  // 1. Forward selected headers
+  const forwardHeaders = [
+    'authorization',
+    'user-agent',
+    'accept',
+    'content-type',
+    'x-request-id',
+    'x-correlation-id'
+  ];
+  
+  forwardHeaders.forEach(header => {
+    if (incomingHeaders[header]) {
+      outgoingHeaders[header] = incomingHeaders[header];
+    }
+  });
+  
+  // 2. Add gateway-specific headers
+  outgoingHeaders['x-gateway-version'] = '2023.11';
+  outgoingHeaders['x-forwarded-timestamp'] = Date.now();
+  
+  // 3. Remove sensitive headers
+  delete outgoingHeaders['cookie']; // Don't forward cookies to internal services
+  delete outgoingHeaders['x-api-key']; // Use service-to-service auth instead
+  
+  // 4. Normalize header names (lowercase for HTTP/2)
+  const normalized = {};
+  Object.keys(outgoingHeaders).forEach(key => {
+    normalized[key.toLowerCase()] = outgoingHeaders[key];
+  });
+  
+  return normalized;
+};
+
+// Usage in proxy middleware
+app.use('/api/*', async (req, res) => {
+  const targetUrl = `https://internal-service${req.originalUrl}`;
+  
+  const response = await fetch(targetUrl, {
+    method: req.method,
+    headers: transformHeaders(req.headers),
+    body: req.body ? JSON.stringify(req.body) : undefined
+  });
+  
+  // Transform response headers back
+  Object.entries(response.headers).forEach(([key, value]) => {
+    res.setHeader(key, value);
+  });
+  
+  // Add proxy headers
+  res.setHeader('via', '1.1 api-gateway');
+  
+  res.status(response.status).send(await response.text());
+});
+```
+
+### Rate Limiting with Headers
+
+```javascript
+// Rate limiting with informative headers
+const rateLimit = require('express-rate-limit');
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per window
+  standardHeaders: true, // Return rate limit info in headers
+  legacyHeaders: false,
+  message: 'Too many requests from this IP',
+  skipSuccessfulRequests: false,
+  
+  // Custom headers
+  headers: {
+    'x-ratelimit-limit': '100',
+    'x-ratelimit-remaining': '{{remaining}}',
+    'x-ratelimit-reset': '{{reset}}'
+  },
+  
+  handler: (req, res, next, options) => {
+    res.status(options.statusCode).set({
+      'x-ratelimit-limit': options.limit,
+      'x-ratelimit-remaining': 0,
+      'x-ratelimit-reset': Math.ceil(options.windowMs / 1000),
+      'retry-after': Math.ceil(options.windowMs / 1000)
+    }).json({
+      error: 'Rate limit exceeded',
+      message: options.message
+    });
+  }
+});
+
+app.use('/api/', limiter);
+```
+
+## Debugging and Monitoring Headers
+
+### Request/Response Header Logging
+
+```javascript
+// Comprehensive header logging middleware
+const headerLogger = (req, res, next) => {
+  const startTime = Date.now();
+  
+  // Log request headers
+  console.log('=== REQUEST HEADERS ===');
+  console.log(`${req.method} ${req.url} HTTP/${req.httpVersion}`);
+  Object.entries(req.headers).forEach(([key, value]) => {
+    console.log(`${key}: ${value}`);
+  });
+  console.log('');
+  
+  // Capture original send/end methods
+  const originalSend = res.send;
+  const originalEnd = res.end;
+  
+  let responseBody = '';
+  
+  res.send = function(body) {
+    responseBody = body;
+    return originalSend.call(this, body);
+  };
+  
+  res.end = function(data, encoding, callback) {
+    if (data) {
+      responseBody += data;
+    }
+    return originalEnd.call(this, data, encoding, callback);
+  };
+  
+  // Log response when finished
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    
+    console.log('=== RESPONSE HEADERS ===');
+    console.log(`HTTP/${req.httpVersion} ${res.statusCode} ${res.statusMessage}`);
+    
+    const headers = res.getHeaders();
+    Object.entries(headers).forEach(([key, value]) => {
+      console.log(`${key}: ${value}`);
+    });
+    
+    console.log(`\nDuration: ${duration}ms`);
+    console.log('========================\n');
+  });
+  
+  next();
+};
+
+app.use(headerLogger);
+```
+
+### Header Analysis Tools
+
+```javascript
+// Header validation and analysis utility
+class HeaderAnalyzer {
+  static analyzeSecurityHeaders(res) {
+    const headers = res.getHeaders();
+    const analysis = {
+      score: 100,
+      issues: [],
+      recommendations: []
+    };
+    
+    // Check for critical security headers
+    const criticalHeaders = [
+      { name: 'content-security-policy', required: true },
+      { name: 'strict-transport-security', required: process.env.NODE_ENV === 'production' },
+      { name: 'x-content-type-options', required: true },
+      { name: 'x-frame-options', required: true }
+    ];
+    
+    criticalHeaders.forEach(({ name, required }) => {
+      if (required && !headers[name]) {
+        analysis.score -= 20;
+        analysis.issues.push(`Missing critical header: ${name}`);
+        analysis.recommendations.push(`Add ${name} header`);
+      }
+    });
+    
+    // Check cookie security
+    const setCookie = headers['set-cookie'];
+    if (setCookie) {
+      const cookies = Array.isArray(setCookie) ? setCookie : [setCookie];
+      
+      cookies.forEach(cookie => {
+        if (!cookie.includes('HttpOnly')) {
+          analysis.issues.push('Cookie missing HttpOnly flag');
+        }
+        if (process.env.NODE_ENV === 'production' && !cookie.includes('Secure')) {
+          analysis.issues.push('Cookie missing Secure flag in production');
+        }
+        if (!cookie.includes('SameSite')) {
+          analysis.recommendations.push('Add SameSite attribute to cookies');
+        }
+      });
+    }
+    
+    return analysis;
+  }
+  
+  static analyzePerformanceHeaders(res) {
+    const headers = res.getHeaders();
+    const analysis = {
+      cacheScore: 0,
+      compressionScore: 0,
+      issues: []
+    };
+    
+    // Cache headers analysis
+    const cacheControl = headers['cache-control'];
+    if (cacheControl) {
+      if (cacheControl.includes('public') && cacheControl.includes('max-age')) {
+        analysis.cacheScore = 100;
+      } else if (cacheControl.includes('no-cache') || cacheControl.includes('no-store')) {
+        analysis.cacheScore = 0;
+        analysis.issues.push('Response not cacheable');
+      }
+    } else {
+      analysis.issues.push('Missing Cache-Control header');
+    }
+    
+    // Compression analysis
+    const contentEncoding = headers['content-encoding'];
+    if (contentEncoding && ['gzip', 'br', 'deflate'].includes(contentEncoding)) {
+      analysis.compressionScore = 100;
+    } else {
+      analysis.issues.push('Response not compressed');
+    }
+    
+    return analysis;
+  }
+}
+
+// Usage
+app.use((req, res, next) => {
+  const originalSend = res.send;
+  res.send = function(body) {
+    // Analyze headers before sending
+    const securityAnalysis = HeaderAnalyzer.analyzeSecurityHeaders(res);
+    const perfAnalysis = HeaderAnalyzer.analyzePerformanceHeaders(res);
+    
+    // Log issues in development
+    if (process.env.NODE_ENV === 'development') {
+      if (securityAnalysis.issues.length > 0) {
+        console.warn('Security header issues:', securityAnalysis.issues);
+      }
+      if (perfAnalysis.issues.length > 0) {
+        console.warn('Performance header issues:', perfAnalysis.issues);
+      }
+    }
+    
+    return originalSend.call(this, body);
+  };
+  next();
+});
+```
+
+## Real-World Industrial Examples
+
+### Microservices Communication Headers
+
+```javascript
+// Service-to-service communication in microservices architecture
+class ServiceClient {
+  constructor(serviceName) {
+    this.serviceName = serviceName;
+  }
+  
+  async callService(endpoint, options = {}) {
+    const defaultHeaders = {
+      'user-agent': `ServiceClient/${this.serviceName}`,
+      'accept': 'application/json',
+      'content-type': 'application/json',
+      'x-request-id': options.requestId || generateRequestId(),
+      'x-correlation-id': options.correlationId || generateCorrelationId(),
+      'x-caller-service': this.serviceName,
+      'x-caller-instance': process.env.HOSTNAME || 'unknown',
+      'x-timestamp': Date.now().toString(),
+      'authorization': `Bearer ${await getServiceToken()}`
+    };
+    
+    const headers = { ...defaultHeaders, ...options.headers };
+    
+    // Add tracing headers for distributed tracing
+    if (options.traceContext) {
+      headers['traceparent'] = options.traceContext.traceparent;
+      headers['tracestate'] = options.traceContext.tracestate;
+    }
+    
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      method: options.method || 'GET',
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      timeout: options.timeout || 30000
+    });
+    
+    // Extract and return headers along with data
+    const responseHeaders = {};
+    response.headers.forEach((value, key) => {
+      responseHeaders[key] = value;
+    });
+    
+    return {
+      status: response.status,
+      headers: responseHeaders,
+      data: await response.json().catch(() => null),
+      
+      // Special headers for rate limiting
+      rateLimit: {
+        limit: parseInt(responseHeaders['x-ratelimit-limit'] || '0'),
+        remaining: parseInt(responseHeaders['x-ratelimit-remaining'] || '0'),
+        reset: parseInt(responseHeaders['x-ratelimit-reset'] || '0')
+      }
+    };
+  }
+}
+
+// Usage
+const userService = new ServiceClient('api-gateway');
+const result = await userService.callService('/users/123', {
+  requestId: 'req_abc123',
+  correlationId: 'corr_xyz789'
+});
+```
+
+### CDN and Edge Headers
+
+```http
+# Request from CDN to origin
+X-Forwarded-For: 203.0.113.195, 198.51.100.10
+X-Forwarded-Proto: https
+X-Forwarded-Host: www.example.com
+X-CDN-Request-ID: cdn_req_123456
+X-CDN-Pop: LAX
+X-CDN-Cache-Status: MISS
+Accept-Encoding: gzip, br
+
+# Response from origin to CDN
+Cache-Control: public, max-age=3600, s-maxage=7200
+CDN-Cache-Control: public, max-age=7200
+Vary: Accept-Encoding
+ETag: "abc123"
+X-Cacheable: YES
+Surrogate-Control: max-age=86400
+```
+
+### API Versioning via Headers
+
+```javascript
+// API versioning with headers
+const apiVersions = {
+  '2023-01-01': require('./controllers/v20230101'),
+  '2023-06-01': require('./controllers/v20230601'),
+  '2023-11-01': require('./controllers/v20231101')
+};
+
+app.use('/api/*', (req, res, next) => {
+  // Extract version from header or default to latest
+  const version = req.headers['x-api-version'] || 
+                  req.headers['accept']?.match(/version=(\d{4}-\d{2}-\d{2})/)?.[1] ||
+                  '2023-11-01';
+  
+  if (!apiVersions[version]) {
+    return res.status(400).json({
+      error: 'Unsupported API version',
+      supportedVersions: Object.keys(apiVersions),
+      defaultVersion: '2023-11-01'
+    });
+  }
+  
+  // Add version to request for downstream use
+  req.apiVersion = version;
+  req.apiController = apiVersions[version];
+  
+  // Set version in response headers
+  res.set('X-API-Version', version);
+  res.set('X-API-Version-Deprecated', isVersionDeprecated(version));
+  res.set('X-API-Version-Sunset', getSunsetDate(version));
+  
+  next();
+});
+
+// Route handling with version-specific controllers
+app.get('/api/users/:id', (req, res) => {
+  req.apiController.users.getById(req, res);
+});
+```
+
+## Common Header Pitfalls and Solutions
+
+### âš ï¸ Header Injection Vulnerabilities
+
+```javascript
+// UNSAFE: Direct header injection
+app.get('/unsafe', (req, res) => {
+  const userInput = req.query.headerValue;
+  // âš ï¸ CRLF injection possible!
+  res.set('X-Custom-Header', userInput);
+  res.send('Done');
+});
+
+// SAFE: Header validation and sanitization
+app.get('/safe', (req, res) => {
+  const userInput = req.query.headerValue;
+  
+  // Validate header value
+  if (!isValidHeaderValue(userInput)) {
+    return res.status(400).json({ error: 'Invalid header value' });
+  }
+  
+  // Sanitize: remove CRLF sequences
+  const sanitized = userInput.replace(/[\r\n]/g, '');
+  
+  // Set safe maximum length
+  const truncated = sanitized.substring(0, 1024);
+  
+  res.set('X-Custom-Header', truncated);
+  res.send('Done');
+});
+
+function isValidHeaderValue(value) {
+  // Reject control characters, CRLF sequences
+  return !/[\x00-\x1F\x7F\r\n]/.test(value);
+}
+```
+
+### âš ï¸ Header Spoofing Protection
+
+```javascript
+// Prevent header spoofing in proxy environments
+const trustedProxies = ['10.0.0.0/8', '192.168.0.0/16', '172.16.0.0/12'];
+
+app.set('trust proxy', (ip) => {
+  return trustedProxies.some(cidr => ipInCidr(ip, cidr));
+});
+
+// Validate critical headers come from trusted sources
+const validateForwardedHeaders = (req, res, next) => {
+  const xForwardedFor = req.headers['x-forwarded-for'];
+  
+  if (xForwardedFor) {
+    const ips = xForwardedFor.split(',').map(ip => ip.trim());
+    
+    // Last IP should be from trusted proxy
+    const lastProxy = ips[ips.length - 1];
+    if (!isTrustedProxy(lastProxy)) {
+      console.warn(`Untrusted proxy attempt: ${lastProxy}`);
+      delete req.headers['x-forwarded-for'];
+      delete req.headers['x-forwarded-proto'];
+      delete req.headers['x-forwarded-host'];
+    }
+  }
+  
+  next();
+};
+
+app.use(validateForwardedHeaders);
+```
+
+## Testing Headers
+
+```javascript
+// Header testing with Jest/Supertest
+const request = require('supertest');
+const app = require('../app');
+
+describe('Header Tests', () => {
+  test('should include security headers', async () => {
+    const response = await request(app).get('/');
+    
+    expect(response.headers['content-security-policy']).toBeDefined();
+    expect(response.headers['x-content-type-options']).toBe('nosniff');
+    expect(response.headers['x-frame-options']).toBe('DENY');
+  });
+  
+  test('should handle content negotiation headers', async () => {
+    const response = await request(app)
+      .get('/api/data')
+      .set('Accept', 'application/json')
+      .set('Accept-Language', 'en-US');
+    
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toMatch(/application\/json/);
+    expect(response.headers['vary']).toContain('Accept');
+    expect(response.headers['vary']).toContain('Accept-Language');
+  });
+  
+  test('should validate required headers', async () => {
+    const response = await request(app)
+      .post('/api/users')
+      .send({ name: 'Test' });
+    
+    // Should fail without Content-Type
+    expect(response.status).toBe(400);
+  });
+  
+  test('should handle conditional requests with ETag', async () => {
+    // First request to get ETag
+    const firstResponse = await request(app).get('/api/resource/1');
+    const etag = firstResponse.headers.etag;
+    
+    // Second request with If-None-Match
+    const secondResponse = await request(app)
+      .get('/api/resource/1')
+      .set('If-None-Match', etag);
+    
+    expect(secondResponse.status).toBe(304); // Not Modified
+  });
+});
+```
+
+## Performance Optimization Checklist
+
+### âœ… Header Performance Best Practices
+
+1. **Minimize Header Size**
+   - Remove unnecessary headers
+   - Use short header values
+   - Consider HTTP/2 header compression
+
+2. **Enable Compression**
+   ```javascript
+   const compression = require('compression');
+   app.use(compression({
+     filter: (req, res) => {
+       // Don't compress very small responses
+       if (res.getHeader('content-length') < 1024) return false;
+       return compression.filter(req, res);
+     }
+   }));
+   ```
+
+3. **Implement Caching Strategically**
+   - Static assets: long cache times with versioning
+   - Dynamic content: appropriate cache-control
+   - Personal data: private or no-cache
+
+4. **Use HTTP/2**
+   - Multiplexing reduces header overhead
+   - Server push for critical resources
+
+5. **Monitor Header Performance**
+   ```javascript
+   // Track header size impact
+   app.use((req, res, next) => {
+     const start = process.hrtime();
+     res.on('finish', () => {
+       const diff = process.hrtime(start);
+       const duration = diff[0] * 1e3 + diff[1] / 1e6;
+       
+       const headerSize = JSON.stringify(res.getHeaders()).length;
+       console.log(`Request ${req.method} ${req.url}: ${duration}ms, headers: ${headerSize} bytes`);
+     });
+     next();
+   });
+   ```
+
+## Summary: Industrial Header Guidelines
+
+### Do's and Don'ts
+
+**âœ… DO:**
+- Always set security headers (CSP, HSTS, etc.)
+- Use appropriate Cache-Control for each resource type
+- Include Vary header when content negotiation is used
+- Validate and sanitize all header inputs
+- Use standard header names and formats
+- Log headers for debugging (sanitize sensitive data)
+
+**âš ï¸ DON'T:**
+- Expose server version information
+- Trust headers from untrusted sources
+- Send sensitive data in headers (use body with encryption)
+- Use headers for large amounts of data
+- Rely on client-provided headers for security decisions
+- Forget to handle OPTIONS requests for CORS
+
+### Header Priority List (Most Important First)
+
+1. **Security Headers**: CSP, HSTS, X-Content-Type-Options, X-Frame-Options
+2. **Authentication Headers**: Authorization, WWW-Authenticate
+3. **Content Headers**: Content-Type, Content-Length, Content-Encoding
+4. **Cache Headers**: Cache-Control, ETag, Last-Modified
+5. **CORS Headers**: Access-Control-Allow-Origin, Access-Control-Allow-Methods
+6. **Performance Headers**: Accept-Ranges, Timing-Allow-Origin
+7. **Custom Headers**: X-Request-ID, X-API-Version
+
+### Final Industrial Example: Complete Header Setup
+
+```javascript
+// Complete industrial header configuration
+const configureHeaders = (app) => {
+  // 1. Security headers
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+      },
+    },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true
+    },
+    xFrameOptions: { action: 'deny' },
+    xContentTypeOptions: true,
+    xXssProtection: true,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+  }));
+  
+  // 2. CORS configuration
+  app.use(cors({
+    origin: process.env.ALLOWED_ORIGINS.split(','),
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Request-ID',
+      'X-API-Version',
+      'Accept',
+      'Accept-Language'
+    ],
+    exposedHeaders: [
+      'X-Request-ID',
+      'X-RateLimit-Limit',
+      'X-RateLimit-Remaining',
+      'X-RateLimit-Reset'
+    ],
+    credentials: true,
+    maxAge: 86400 // 24 hours
+  }));
+  
+  // 3. Request tracing
+  app.use((req, res, next) => {
+    req.id = req.headers['x-request-id'] || uuidv4();
+    res.set('X-Request-ID', req.id);
+    next();
+  });
+  
+  // 4. Compression
+  app.use(compression());
+  
+  // 5. Cache control by route
+  app.use('/static/', express.static('public', {
+    maxAge: '1y',
+    immutable: true,
+    setHeaders: (res, path) => {
+      res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  }));
+  
+  app.use('/api/', (req, res, next) => {
+    // API responses typically shouldn't be cached by default
+    res.set('Cache-Control', 'private, no-cache, must-revalidate');
+    next();
+  });
+  
+  // 6. Custom headers for monitoring
+  app.use((req, res, next) => {
+    res.set('X-Powered-By', 'Our Awesome API');
+    res.set('X-Environment', process.env.NODE_ENV);
+    res.set('X-Response-Time', Date.now().toString());
+    next();
+  });
+};
+
+// Apply all header configurations
+configureHeaders(app);
+```
+
+**Remember**: Headers are the control plane of HTTP communication. They dictate security, performance, caching, authentication, and content negotiation. Mastering headers is essential for building robust, secure, and high-performance web applications.
+```

@@ -1,0 +1,276 @@
+```markdown
+# URL Anatomy - Short Notes
+
+## **What is a URL?**
+**Uniform Resource Locator** - The complete address of a resource on the web.
+
+---
+
+## **URL Structure (Basic Format)**
+
+```
+scheme://domain:port/path?query#fragment
+```
+
+Example:
+```
+https://www.example.com:8080/products?id=123&sort=price#specs
+```
+
+---
+
+## **URL Components Explained**
+
+### **1. Scheme/Protocol**
+- **What**: The protocol for accessing the resource
+- **Examples**: `http://`, `https://`, `ftp://`, `mailto:`, `file://`
+- **Industrial Note**: Always use **HTTPS** for security
+
+### **2. Authority (Domain + Port)**
+```
+subdomain.domain.tld:port
+```
+
+**Subdomain**: 
+- `www` (common, but not required)
+- `api`, `blog`, `shop`, `admin` (functional)
+- Example: `api.example.com`
+
+**Domain (Second-Level Domain)**:
+- Your brand name: `example` in `example.com`
+
+**Top-Level Domain (TLD)**:
+- `.com`, `.org`, `.net` (generic)
+- `.uk`, `.de`, `.jp` (country-code)
+- `.app`, `.dev`, `.io` (modern)
+
+**Port**:
+- `:80` (HTTP default - usually hidden)
+- `:443` (HTTPS default - usually hidden)
+- `:3000`, `:8080` (development servers)
+- `:27017` (MongoDB), `:3306` (MySQL)
+
+### **3. Path**
+- **What**: Location of the resource on the server
+- **Format**: `/folder/subfolder/resource`
+- **Best Practice**: Use nouns, not verbs (`/users`, not `/getUsers`)
+- **RESTful**: `/api/users/123/posts/456`
+
+### **4. Query String**
+- **What**: Additional parameters after `?`
+- **Format**: `?key1=value1&key2=value2`
+- **Use Cases**:
+  - Search filters: `?q=laptop&category=electronics`
+  - Pagination: `?page=2&limit=20`
+  - Sorting: `?sort=price&order=desc`
+- **Encoding**: Spaces become `%20`, `&` becomes `%26`
+
+### **5. Fragment**
+- **What**: Internal page reference after `#`
+- **Use**: Anchor links within HTML pages
+- **Example**: `#section-2`, `#comments`
+- **Note**: Not sent to server - browser-only
+
+---
+
+## **URL Examples Breakdown**
+
+### **Simple Website URL**
+```
+https://www.google.com/search
+```
+- Scheme: `https://`
+- Subdomain: `www`
+- Domain: `google`
+- TLD: `.com`
+- Path: `/search`
+
+### **API Endpoint with Parameters**
+```
+https://api.github.com/users/octocat/repos?sort=updated&per_page=10
+```
+- Scheme: `https://`
+- Subdomain: `api`
+- Domain: `github`
+- TLD: `.com`
+- Path: `/users/octocat/repos`
+- Query: `?sort=updated&per_page=10`
+
+### **Complex E-commerce URL**
+```
+https://shop.example.com:8443/category/electronics/laptops
+  ?brand=dell&price_min=500&price_max=1500
+  &sort=rating#reviews
+```
+- Port: `:8443` (custom HTTPS port)
+- Path: `/category/electronics/laptops`
+- Query: Multiple filter parameters
+- Fragment: `#reviews` (jumps to reviews section)
+
+---
+
+## **Special URL Components**
+
+### **Authentication in URLs (Not Recommended)**
+```
+https://username:password@api.example.com/data
+```
+- **âš ï¸ Security Warning**: Credentials exposed in logs, browser history
+- **Alternative**: Use `Authorization` header or tokens
+
+### **IP Address URLs**
+```
+http://192.168.1.100:3000/api
+http://[2001:db8::1]:8080/app
+```
+- IPv4: Dotted decimal notation
+- IPv6: Enclosed in brackets `[...]`
+
+### **File URLs**
+```
+file:///C:/Users/Name/Documents/file.txt
+file:///home/user/file.txt
+```
+- Access local files
+- Format: `file://` + absolute path
+
+### **Data URLs**
+```
+data:text/html,%3Ch1%3EHello%3C%2Fh1%3E
+data:image/png;base64,iVBORw0KGgoAAA...
+```
+- Embed small files directly in URL
+- Format: `data:[MIME-type][;base64],<data>`
+
+---
+
+## **URL Encoding Rules**
+
+### **Reserved Characters (Must Encode)**
+| Character | Meaning | Encoded |
+|-----------|---------|---------|
+| ` ` (space) | Space | `%20` |
+| `?` | Query start | `%3F` |
+| `#` | Fragment | `%23` |
+| `&` | Parameter separator | `%26` |
+| `=` | Key-value separator | `%3D` |
+
+### **Example Encoding**
+```
+Original:  search?q=coffee & tea
+Encoded:   search?q=coffee%20%26%20tea
+```
+
+### **JavaScript Encoding**
+```javascript
+encodeURIComponent('coffee & tea') // 'coffee%20%26%20tea'
+decodeURIComponent('coffee%20%26%20tea') // 'coffee & tea'
+```
+
+---
+
+## **URL vs URI vs URN**
+
+### **URI (Uniform Resource Identifier)**
+- **Broader category**: Anything that identifies a resource
+- **Includes**: URLs and URNs
+- **Example**: `isbn:0451450523` (URN), `https://example.com` (URL)
+
+### **URL (Uniform Resource Locator)**
+- **Subset of URI**: Tells WHERE and HOW to get resource
+- **Always includes**: Access mechanism/location
+- **Example**: `http://example.com/file.pdf`
+
+### **URN (Uniform Resource Name)**
+- **Subset of URI**: Persistent, location-independent name
+- **Format**: `urn:<namespace>:<specific-string>`
+- **Example**: `urn:isbn:0451450523` (book ISBN)
+
+**Analogy**:
+- **URI** = Person's identity (SSN)
+- **URL** = Person's current address
+- **URN** = Person's permanent name
+
+---
+
+## **Best Practices**
+
+### **RESTful URL Design**
+```
+GET    /users           # List users
+POST   /users           # Create user
+GET    /users/{id}      # Get user
+PUT    /users/{id}      # Update user
+DELETE /users/{id}      # Delete user
+GET    /users/{id}/posts # Nested resource
+```
+
+### **SEO-Friendly URLs**
+```diff
+- /product?id=12345&category=electronics
++ /electronics/laptops/apple-macbook-pro-2023
+```
+
+### **Security Considerations**
+1. **HTTPS always**: Never send sensitive data over HTTP
+2. **No credentials in URL**: Use headers instead
+3. **Validate input**: Prevent URL-based attacks (injection)
+4. **Canonical URLs**: Avoid duplicate content issues
+
+---
+
+## **Common URL Patterns in Industry**
+
+### **API Versioning**
+```
+https://api.example.com/v1/users
+https://api.example.com/v2/users
+```
+
+### **Microservices Routing**
+```
+https://user-service.example.com/api
+https://order-service.example.com/api
+https://payment-service.example.com/api
+```
+
+### **CDN URLs**
+```
+https://cdn.example.com/images/logo.png?v=20231115
+```
+
+### **Signed URLs (Time-limited access)**
+```
+https://storage.example.com/file.pdf?signature=abc123&expires=1700000000
+```
+
+---
+
+## **Quick Reference Table**
+
+| Part | Example | Purpose |
+|------|---------|---------|
+| **Scheme** | `https://` | Protocol |
+| **Domain** | `example.com` | Server address |
+| **Port** | `:8080` | Service port |
+| **Path** | `/api/users` | Resource location |
+| **Query** | `?page=2&limit=10` | Parameters |
+| **Fragment** | `#section-3` | Page anchor |
+| **Userinfo** | `user:pass@` | Credentials (avoid) |
+
+---
+
+## **Key Takeaways**
+
+1. **URLs have 6 main parts**: scheme, domain, port, path, query, fragment
+2. **Always use HTTPS** for security
+3. **Design RESTful URLs** with nouns, not verbs
+4. **Never put credentials** in URLs
+5. **URL-encode special characters** when needed
+6. **URL ≠ URI** - URLs are a type of URI that specifies location
+7. **Good URLs are** human-readable, SEO-friendly, and consistent
+
+---
+
+**Remember**: A well-structured URL is self-documenting and follows predictable patterns that both humans and machines can understand.
+```
