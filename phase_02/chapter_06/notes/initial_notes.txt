@@ -1,0 +1,460 @@
+````markdown
+# CHAPTER 6 — DJANGO FUNDAMENTALS & FIRST PROJECT (Industrial Training Notes)
+
+---
+
+## Objective
+This chapter establishes the **core mental model of Django**. By the end of this chapter, you will understand:
+- What Django is architecturally
+- How a Django project is structured
+- How HTTP requests flow through Django
+- How Django apps are organized
+- How URLs connect to Python code
+- How to build a clean multi-page backend-driven website
+
+This chapter is **non-negotiable** for real backend work. Every advanced Django concept (ORM, DRF, auth, admin) builds on this.
+
+---
+
+## 6.1 Django Philosophy & Setup
+
+---
+
+### 6.1.1 What Django Is (Industry Perspective)
+
+Django is a **high-level Python web framework** that helps you:
+- Handle HTTP requests and responses
+- Route URLs to Python functions
+- Interact with databases safely
+- Enforce security best practices by default
+- Build maintainable, scalable backend systems
+
+**Industry truth:**
+Django is NOT:
+- Just a website builder
+- Just templates
+- Just ORM
+
+Django IS:
+- A **request–response orchestration engine**
+- A **batteries-included backend framework**
+
+---
+
+### 6.1.2 Django Design Philosophy
+
+Django follows these principles:
+
+- **DRY (Don’t Repeat Yourself)**  
+  Reuse logic, avoid duplication.
+
+- **Explicit is better than implicit**  
+  Configuration is readable and predictable.
+
+- **Security by default**  
+  CSRF protection, SQL injection prevention, XSS defense are built-in.
+
+- **Loose coupling, tight cohesion**  
+  Components are independent but work together cleanly.
+
+⚠️ Warning: Django gives you power fast — misuse leads to messy monoliths if structure is ignored.
+
+---
+
+### 6.1.3 Installing Django (Proper Way)
+
+#### Step 1: Create Virtual Environment
+```bash
+python -m venv venv
+````
+
+Activate:
+
+```bash
+# Windows
+venv\Scripts\activate
+
+# Linux / macOS
+source venv/bin/activate
+```
+
+✅ Best Practice:
+
+* One virtual environment per project
+* Never install Django globally for production work
+
+---
+
+#### Step 2: Install Django
+
+```bash
+pip install django
+```
+
+Verify installation:
+
+```bash
+django-admin --version
+```
+
+---
+
+### 6.1.4 Creating a Django Project
+
+```bash
+django-admin startproject myproject
+```
+
+This creates:
+
+```
+myproject/
+│
+├── manage.py
+└── myproject/
+    ├── __init__.py
+    ├── settings.py
+    ├── urls.py
+    ├── asgi.py
+    └── wsgi.py
+```
+
+---
+
+### 6.1.5 Understanding Project Files (Critical)
+
+---
+
+#### manage.py
+
+```python
+#!/usr/bin/env python
+```
+
+* Command-line utility
+* Used for:
+
+  * Running server
+  * Migrations
+  * Creating apps
+  * Django shell
+
+⚠️ Never modify unless you know exactly why.
+
+---
+
+#### settings.py (Central Configuration)
+
+Controls:
+
+* Installed apps
+* Database connection
+* Middleware
+* Templates
+* Static files
+* Security settings
+
+Example:
+
+```python
+DEBUG = True
+```
+
+⚠️ DEBUG=True is **never allowed in production**
+
+---
+
+#### urls.py (Traffic Controller)
+
+```python
+from django.urls import path
+```
+
+* Maps URLs to views
+* Acts like a router
+
+Industry analogy:
+
+> urls.py is the receptionist that decides which department handles a request.
+
+---
+
+#### wsgi.py / asgi.py
+
+* **WSGI** → synchronous servers (Gunicorn)
+* **ASGI** → async servers (Daphne, Uvicorn)
+
+You don’t touch these early, but they are vital in deployment.
+
+---
+
+### 6.1.6 Running Development Server
+
+```bash
+python manage.py runserver
+```
+
+Default:
+
+```
+http://127.0.0.1:8000/
+```
+
+What happens internally:
+
+1. Server listens for HTTP requests
+2. Django parses request
+3. Routes via urls.py
+4. Calls view
+5. Returns HTTP response
+
+---
+
+## 6.2 Apps & MVT Pattern
+
+---
+
+### 6.2.1 What Is a Django App?
+
+A **Django app** is a logical module that handles **one responsibility**.
+
+Examples:
+
+* blog
+* users
+* payments
+* products
+
+✅ Best Practice:
+
+* One app = one domain responsibility
+
+---
+
+### 6.2.2 Creating a Django App
+
+```bash
+python manage.py startapp pages
+```
+
+Creates:
+
+```
+pages/
+├── admin.py
+├── apps.py
+├── models.py
+├── tests.py
+├── views.py
+└── migrations/
+```
+
+---
+
+### 6.2.3 Registering App (Mandatory Step)
+
+In `settings.py`:
+
+```python
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    ...
+    'pages',
+]
+```
+
+⚠️ Forgetting this causes:
+
+* Models not detected
+* Admin not working
+* Templates not found
+
+---
+
+### 6.2.4 MVT Pattern Explained (Django’s Core)
+
+Django uses **MVT**, not MVC.
+
+| Component | Responsibility  |
+| --------- | --------------- |
+| Model     | Data & database |
+| View      | Business logic  |
+| Template  | Presentation    |
+
+---
+
+#### Model
+
+* Defines database schema
+* Uses ORM
+
+#### View
+
+* Receives request
+* Executes logic
+* Returns response
+
+#### Template
+
+* HTML with dynamic data
+* No business logic
+
+⚠️ Common Mistake:
+Putting logic in templates → BAD architecture
+
+---
+
+### 6.2.5 Database Configuration (Intro)
+
+Default:
+
+```python
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+```
+
+SQLite is fine for learning.
+
+Production uses:
+
+* PostgreSQL
+* MySQL
+
+---
+
+## 6.3 URL Routing & Basic Views
+
+---
+
+### 6.3.1 URL Routing Flow
+
+```
+Browser → urls.py → view → HttpResponse
+```
+
+---
+
+### 6.3.2 Creating First View
+
+In `pages/views.py`:
+
+```python
+from django.http import HttpResponse
+
+def home(request):
+    return HttpResponse("Home Page")
+```
+
+Explanation:
+
+* `request` contains HTTP metadata
+* `HttpResponse` creates HTTP response
+
+---
+
+### 6.3.3 Connecting URL to View
+
+In `myproject/urls.py`:
+
+```python
+from django.urls import path
+from pages import views
+
+urlpatterns = [
+    path('', views.home),
+]
+```
+
+Now:
+
+```
+http://127.0.0.1:8000/
+```
+
+shows **Home Page**
+
+---
+
+### 6.3.4 Multiple Pages (Mini Project)
+
+#### views.py
+
+```python
+def home(request):
+    return HttpResponse("Home")
+
+def about(request):
+    return HttpResponse("About Us")
+
+def contact(request):
+    return HttpResponse("Contact Page")
+```
+
+#### urls.py
+
+```python
+urlpatterns = [
+    path('', views.home),
+    path('about/', views.about),
+    path('contact/', views.contact),
+]
+```
+
+---
+
+### 6.3.5 Path Converters (Dynamic URLs)
+
+```python
+path('users/<int:id>/', views.user_detail)
+```
+
+Meaning:
+
+* `<int:id>` captures number from URL
+* Passed as argument to view
+
+```python
+def user_detail(request, id):
+    return HttpResponse(f"User ID: {id}")
+```
+
+---
+
+### 6.3.6 Industry Best Practices
+
+✅ Always use trailing slashes
+✅ Separate app URLs using `include()`
+✅ Keep views thin
+✅ Avoid logic in urls.py
+
+---
+
+### 6.3.7 Common Beginner Mistakes ⚠️
+
+* Mixing project and app responsibilities
+* Forgetting to register apps
+* Hardcoding HTML in views
+* Ignoring URL structure planning
+* Treating Django as “just templates”
+
+---
+
+## End of Chapter 6 Outcomes
+
+After this chapter, you can:
+
+* Create Django projects confidently
+* Understand request → response flow
+* Structure apps professionally
+* Build multi-page backend-driven sites
+* Prepare for ORM and authentication
+
+This chapter is the **foundation of all Django mastery**.
+
+```
+```

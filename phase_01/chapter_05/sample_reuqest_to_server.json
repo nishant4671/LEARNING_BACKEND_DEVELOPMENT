@@ -1,0 +1,8 @@
+POST /api/auth/login HTTP/1.1 #http refers to the protocol used foir the communication ,  version 1.1 indixcates the version of the protocol being used ,method is post used to send data to the 
+Host: example.com  # specifies the domain name of the server to which the request is being  in simple words it tells the server where to send the request 
+Content-Type: application/json #indicates the media type of the resource being sent to the server , in this case its json , which means the body of the request contains json , other common types include text/html , application/xml etc
+
+{
+  "username": "alice",
+  "password": "securePassword123"
+}

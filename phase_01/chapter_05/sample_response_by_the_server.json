@@ -1,0 +1,12 @@
+HTTP/1.1 200 OK
+Content-Type: application/json
+Set-Cookie: sessionId=abc123; HttpOnly; Secure; SameSite=Strict 
+
+{
+  "message": "Login successful",
+  "user": {
+    "id": 123,
+    "username": "alice",
+    "email": "alice@example.com"
+  }
+}
