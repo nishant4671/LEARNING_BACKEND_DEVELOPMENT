@@ -1,0 +1,17 @@
+Here are the answers to your Django questions:
+
+### 1️⃣ Is Django a library or a framework? Why?
+**Django is a web framework**, specifically a **high-level Python web framework**.  
+This is because it follows the **"Inversion of Control"** principle — it provides a structured architecture (MVT pattern, ORM, routing, admin, etc.) and you build within its conventions, unlike libraries where you call functions as needed.
+
+---
+
+### 2️⃣ In one sentence: what problem does Django solve for backend developers?
+**Django provides a "batteries-included" structure that enables rapid development of secure, scalable web applications without needing to build common backend components from scratch.**
+
+---
+
+### 3️⃣ What is the difference between a Django project and a Django app?
+A **Django project** is the entire web application (configuration, settings, URLs), while a **Django app** is a modular component within that project that handles a specific feature (e.g., blog, user authentication), and can be reused across projects.
+
+

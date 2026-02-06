@@ -1,0 +1,83 @@
+1️⃣ manage.py — The Control Panel
+
+Think of manage.py as a remote control for your Django project.
+
+What it does:
+
+Knows which settings file to load
+
+Lets you run commands like:
+
+runserver
+
+migrate
+
+createsuperuser
+
+Key idea:
+
+manage.py = “Do Django things for THIS project”
+
+You rarely edit this file.
+You use it.
+
+2️⃣ settings.py — The Configuration Brain
+
+This is where Django learns how your project should behave.
+
+It contains:
+
+Which apps exist (INSTALLED_APPS)
+
+Which database to use (DATABASES)
+
+Security settings
+
+Middleware stack
+
+Templates & static files config
+
+Mental model:
+
+settings.py = the DNA of your backend
+
+Change settings → behavior changes everywhere.
+
+3️⃣ urls.py — The Traffic Controller
+
+This file answers one question:
+
+“When a request comes to /something, which code should handle it?”
+
+Example idea (not code yet):
+
+/ → home page logic
+
+/about → about page logic
+
+/contact → contact page logic
+
+Mental model:
+
+urls.py = Google Maps for requests
+
+No URL mapping → Django doesn’t know what to do → 404.
+
+4️⃣ wsgi.py — The Deployment Bridge
+
+This file is not for beginners to edit, but you must understand its role.
+
+What it does:
+
+Acts as a bridge between:
+
+Django
+
+A production server (Gunicorn, uWSGI, etc.)
+
+Mental model:
+
+wsgi.py = “How the outside world talks to Django”
+
+In development, Django hides this from you.
+In production, this becomes critical.

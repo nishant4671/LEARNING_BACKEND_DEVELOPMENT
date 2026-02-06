@@ -1,0 +1,57 @@
+python -m venv venv
+This is a BIG one. Let’s dissect it carefully.
+Syntax
+
+python → use the current Python interpreter
+
+-m venv → run Python’s built-in virtual environment module
+
+venv → name of the environment (folder)
+
+What Python did internally
+
+It created:
+
+venv/
+ ├── Scripts/
+ ├── Lib/
+ ├── pyvenv.cfg
+
+
+This folder contains:
+
+A private Python interpreter
+
+A private pip
+
+A private package space
+
+🧠 Why venv exists
+
+To prevent global package pollution
+To ensure project-specific dependencies
+To make projects reproducible
+
+This is non-negotiable professional practice.
+
+
+
+
+5️⃣ .\venv\Scripts\Activate.ps1 ✅
+What activation actually means
+
+Your shell now points to:
+
+venv’s Python
+
+venv’s pip
+
+You can see this worked because:
+
+(venv) PS C:\Users\HP\...
+
+
+🧠 CRITICAL MENTAL MODEL
+Activation does not change Python
+It changes which Python your terminal points to
+
