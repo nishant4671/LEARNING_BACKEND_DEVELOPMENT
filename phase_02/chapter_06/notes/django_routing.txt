@@ -1,0 +1,18 @@
+Browser request
+   ↓
+project urls.py   ← always first
+   ↓
+include('pages.urls')
+   ↓
+pages/urls.py
+   ↓
+views.home
+   ↓
+HttpResponse
+
+
+
+
+
+Apps NEVER receive requests directly
+The project must delegate to them.

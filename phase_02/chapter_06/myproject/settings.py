@@ -30,6 +30,9 @@ ALLOWED_HOSTS = []
 
 # Application definition
 
+# Delete everything from INSTALLED_APPS = [ to the matching closing bracket ]
+# Replace with:
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -37,8 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'pages.apps.PagesConfig',# Add the pages app to the list of installed apps. This allows Django to recognize the app and include it in the project. The 'pages.apps.PagesConfig' refers to the configuration class for the pages app, which is typically defined in pages/apps.py. By adding this line, you ensure that Django can find and use the views, models, and other components defined in the pages app.
 ]
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

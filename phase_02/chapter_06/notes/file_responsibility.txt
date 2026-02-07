@@ -81,3 +81,112 @@ wsgi.py = “How the outside world talks to Django”
 
 In development, Django hides this from you.
 In production, this becomes critical.
+
+
+
+
+
+
+
+
+
+
+
+
+
+## **1️⃣ Why do we use manage.py instead of running Django directly?**
+
+**manage.py is Django's command-line utility that provides an interface to Django-specific administrative tasks and ensures your project's settings are properly configured.** It acts as a thin wrapper around `django-admin` that automatically sets the `DJANGO_SETTINGS_MODULE` environment variable to point to your project's `settings.py`, allowing Django to locate your configuration.
+
+**Key reasons:**
+- **Project-specific configuration**: It knows about your specific project structure
+- **Convenience**: Shorter commands (`python manage.py runserver` vs `django-admin runserver --settings=myproject.settings`)
+- **Correct environment setup**: Automatically sets Python path and settings module
+- **Custom commands**: You can create and use project-specific custom commands
+
+## **2️⃣ If you want to change the database from SQLite to MySQL, which file do you edit and why?**
+
+**You edit `settings.py` (specifically the `DATABASES` dictionary) because it contains all project configuration including database settings.**
+
+**Example change:**
+```python
+# From SQLite (default):
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+
+# To MySQL:
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'mydatabase',
+        'USER': 'mydatabaseuser',
+        'PASSWORD': 'mypassword',
+        'HOST': 'localhost',
+        'PORT': '3306',
+    }
+}
+```
+
+**Why `settings.py`?**
+- It's Django's central configuration file
+- Database configuration must be set before models can be used
+- Django reads this file to know which database adapter to use
+- Contains all environment-specific settings
+
+**Additional steps needed:**
+1. Install MySQL driver: `pip install mysqlclient` (or `pymysql`)
+2. Create the database in MySQL first
+3. Run migrations: `python manage.py migrate`
+
+## **3️⃣ Which file decides what happens when a user visits /about?**
+
+**The URL routing is determined by `urls.py`, but the actual response is handled by a view function referenced in `urls.py`.**
+
+**How it works:**
+1. **`urls.py` (project or app level)** - Maps URL patterns to view functions:
+```python
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('about/', views.about_view, name='about'),
+    # or for class-based views:
+    # path('about/', views.AboutView.as_view(), name='about'),
+]
+```
+
+2. **`views.py`** - Contains the view function that processes the request:
+```python
+from django.http import HttpResponse
+from django.shortcuts import render
+
+def about_view(request):
+    # Business logic here
+    return render(request, 'about.html', {'data': 'some data'})
+```
+
+3. **Template (optional)** - `about.html` renders the final HTML response.
+
+**Important:** Django follows a **URL → View → Template** flow:
+- `urls.py` decides **which view** to call for `/about/`
+- The view in `views.py` decides **what to do** (return data, render template, etc.)
+- The template (if used) decides **how it looks**
+
+**For nested URLs:**
+- Project's main `urls.py` might include app URLs:
+```python
+# Project urls.py
+from django.urls import include, path
+
+urlpatterns = [
+    path('pages/', include('pages.urls')),
+]
+```
+- App's `urls.py` (in pages app) would then handle `/pages/about/`
+
+
+
