@@ -15,3 +15,5 @@ This is because it follows the **"Inversion of Control"** principle — it provi
 A **Django project** is the entire web application (configuration, settings, URLs), while a **Django app** is a modular component within that project that handles a specific feature (e.g., blog, user authentication), and can be reused across projects.
 
 
+
+  

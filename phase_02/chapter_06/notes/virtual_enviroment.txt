@@ -37,7 +37,7 @@ This is non-negotiable professional practice.
 
 
 
-5️⃣ .\venv\Scripts\Activate.ps1 ✅
+5️⃣ directly ✅
 What activation actually means
 
 Your shell now points to:
