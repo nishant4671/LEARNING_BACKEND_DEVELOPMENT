@@ -1,0 +1,21 @@
+📁 Step 1: Create and open project folder
+powershell
+mkdir mypages
+cd mypages
+📁 Step 2: Create virtual environment
+powershell
+python -m venv venv
+Activate it:
+
+powershell
+.\venv\Scripts\activate    # Windows
+You should see (venv) in your terminal.
+
+📁 Step 3: Install Django
+powershell
+pip install django
+📁 Step 4: Create Django project
+powershell
+django-admin startproject multipagesite .
+Don't forget the . at the end! This creates the project in the current folder.
+
