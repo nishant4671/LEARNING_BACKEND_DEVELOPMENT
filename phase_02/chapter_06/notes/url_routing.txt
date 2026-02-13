@@ -1,0 +1,16 @@
+🔁 The Full Routing Chain (Mental Model)
+
+When a request comes in:
+
+http://127.0.0.1:8000/about/
+
+
+Django processes it in this order:
+
+1️⃣ Project-level urls.py is checked first
+2️⃣ If it finds include('pages.urls'), it delegates
+3️⃣ Inside pages/urls.py, it checks patterns in order
+4️⃣ If a pattern matches → the mapped view function runs
+
+Order matters.
+The first match wins.

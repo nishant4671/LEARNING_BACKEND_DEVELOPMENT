@@ -1,0 +1,53 @@
+Understanding path()
+
+The syntax:
+
+path(route, view, name)
+
+
+Let’s break it:
+
+1️⃣ route
+
+The URL pattern.
+
+Examples:
+
+'' → homepage
+
+'about/'
+
+'contact/'
+
+Important:
+Django expects trailing slash by default.
+
+2️⃣ view
+
+The function that runs if the route matches.
+
+Example:
+
+views.about
+
+
+That function must:
+
+Accept request
+
+Return HttpResponse
+
+3️⃣ name
+
+Internal identifier.
+
+Used later for:
+
+Reverse URL lookup
+
+Template linking
+
+Avoiding hardcoded URLs
+
+You don’t need it for functionality.
+But professionals always use it.
