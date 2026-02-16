@@ -1,0 +1,577 @@
+```markdown
+# CHAPTER 7 — DATABASES & THE DJANGO ORM (Industrial Training Notes)
+
+## 7.1 PostgreSQL Setup & Data Modeling
+
+### 7.1.1 Installing PostgreSQL
+
+PostgreSQL is a powerful, open‑source object‑relational database system used in countless production environments. Its robustness, ACID compliance, and advanced features make it the recommended database for Django projects.
+
+**Installation on different platforms:**
+
+- **Ubuntu/Debian:**
+  ```bash
+  sudo apt update
+  sudo apt install postgresql postgresql-contrib
+  sudo systemctl start postgresql
+  sudo systemctl enable postgresql   # start on boot
+  ```
+
+- **macOS (using Homebrew):**
+  ```bash
+  brew install postgresql
+  brew services start postgresql
+  ```
+
+- **Windows:**
+  Download the installer from [postgresql.org](https://www.postgresql.org/download/windows/) and follow the wizard. During installation, set a password for the `postgres` superuser.
+
+After installation, verify that the PostgreSQL server is running and accessible:
+```bash
+sudo -u postgres psql -c "SELECT version();"
+```
+
+The `psql` command‑line utility is your main interface to the database. You can launch it as the `postgres` system user:
+```bash
+sudo -u postgres psql
+```
+
+### 7.1.2 Creating Databases and Users
+
+A Django project typically uses a dedicated database and a dedicated database user with limited privileges. This follows the principle of least privilege.
+
+**Using the command line (as `postgres` user):**
+
+```bash
+# Create a new database user (role)
+sudo -u postgres createuser --interactive
+# or directly:
+sudo -u postgres createuser --pwprompt myproject_user
+
+# Create a database owned by that user
+sudo -u postgres createdb --owner=myproject_user myproject_db
+```
+
+**Using SQL inside `psql`:**
+
+```sql
+CREATE USER myproject_user WITH PASSWORD 'secure_password';
+CREATE DATABASE myproject_db OWNER myproject_user;
+GRANT ALL PRIVILEGES ON DATABASE myproject_db TO myproject_user;
+```
+
+**Configuring Django (`settings.py`):**
+
+```python
+import os
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
+    }
+}
+```
+
+⚠️ **Never hard‑code database credentials in source code.** Use environment variables or a secret management system. In production, consider using tools like `django-environ` or storing secrets in vaults.
+
+### 7.1.3 Planning Your Data Schema
+
+Before writing code, think about the entities your application needs and how they relate. This is **data modeling**. For a blog platform, we might have:
+
+- **Author** – represents a person who writes posts.
+- **Post** – a blog entry, belongs to one author, can have many tags.
+- **Tag** – a keyword categorising posts, can appear on many posts.
+- **UserProfile** – extends Django’s built‑in `User` model with additional information.
+
+**Relationships:**
+
+- One author writes many posts → **one‑to‑many** (Author → Post).
+- Many posts can have many tags → **many‑to‑many** (Post ↔ Tag).
+- One user has one profile → **one‑to‑one** (User ↔ UserProfile).
+
+Normalisation (up to 3NF) avoids data duplication. For example, author details are stored only in the Author table, and posts reference the author via a foreign key.
+
+### 7.1.4 Defining Django Models
+
+Models are Python classes that map to database tables. Each attribute represents a database column.
+
+**Basic model structure:**
+
+```python
+from django.db import models
+
+class Author(models.Model):
+    name = models.CharField(max_length=100)
+    email = models.EmailField(unique=True)
+    bio = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Author'
+        verbose_name_plural = 'Authors'
+
+    def __str__(self):
+        return self.name
+```
+
+**Common field types and options:**
+
+- `CharField` – short strings, requires `max_length`.
+- `TextField` – large text.
+- `IntegerField`, `FloatField`, `DecimalField` – numeric data.
+- `BooleanField` – True/False.
+- `DateTimeField`, `DateField`, `TimeField` – dates and times.
+- `EmailField`, `URLField`, `SlugField` – specialised text fields with validation.
+- `ForeignKey`, `ManyToManyField`, `OneToOneField` – relationships (covered later).
+
+**Field options:**
+
+- `null=True` – allows database `NULL`.
+- `blank=True` – form validation accepts empty value.
+- `default` – default value if none provided.
+- `unique=True` – enforce unique values.
+- `db_index=True` – creates a database index for faster lookups.
+- `choices` – restrict value to a predefined set.
+- `verbose_name` – human‑readable name (default is field name with underscores replaced).
+
+**Example models with relationships:**
+
+```python
+from django.db import models
+from django.contrib.auth.models import User
+
+class Author(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='author_profile')
+    bio = models.TextField(blank=True)
+    website = models.URLField(blank=True)
+
+    def __str__(self):
+        return self.user.username
+
+class Tag(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    slug = models.SlugField(unique=True)
+
+    def __str__(self):
+        return self.name
+
+class Post(models.Model):
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(unique=True, db_index=True)
+    content = models.TextField()
+    author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name='posts')
+    tags = models.ManyToManyField(Tag, related_name='posts')
+    published = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['slug']),
+            models.Index(fields=['author', '-created_at']),
+        ]
+
+    def __str__(self):
+        return self.title
+```
+
+- **`on_delete`** – required for `ForeignKey` and `OneToOneField`. Options:
+  - `CASCADE`: delete related objects.
+  - `PROTECT`: prevent deletion if related objects exist.
+  - `SET_NULL`: set foreign key to `NULL` (requires `null=True`).
+  - `SET_DEFAULT`: set to default value.
+  - `RESTRICT`: similar to `PROTECT` but can be overridden in some cases.
+  - `DO_NOTHING`: take no action (risky).
+
+- **`related_name`** – name for the reverse relation. For example, `author.posts.all()`.
+- **Indexes** in `Meta` improve query performance. Add them on fields used in `filter()`, `order_by()`, or `lookup`.
+
+⚠️ **Best practices:**
+- Use `slug` fields for URLs, ensure uniqueness.
+- Always define `__str__` for readable object representation.
+- Avoid `null=True` on string‑based fields (`CharField`, `TextField`) – use `blank=True` and store empty strings instead of `NULL`. This simplifies query logic.
+- Set `db_index=True` for fields frequently used in lookups.
+
+## 7.2 Django ORM Queries
+
+### 7.2.1 Making Migrations and Applying Them
+
+Django’s migration system translates model changes into database schema changes.
+
+**Basic workflow:**
+
+1. After defining or changing models, create a migration:
+   ```bash
+   python manage.py makemigrations
+   ```
+   This generates a Python file inside `migrations/` describing the changes.
+
+2. Apply migrations to the database:
+   ```bash
+   python manage.py migrate
+   ```
+
+3. To see the SQL that will be executed without actually running it:
+   ```bash
+   python manage.py sqlmigrate app_name 0001
+   ```
+
+**Working in teams:**
+- Always commit migration files to version control.
+- When pulling changes, run `migrate` to sync your local database.
+- Never alter a migration that has already been applied to production unless absolutely necessary. Create a new migration instead.
+
+### 7.2.2 CRUD Operations Using the ORM
+
+The Django ORM provides a high‑level abstraction to interact with the database.
+
+**Create:**
+
+```python
+# Using create() method
+author = Author.objects.create(name="Jane Doe", email="jane@example.com")
+
+# Instantiate then save
+author = Author(name="John Smith", email="john@example.com")
+author.save()
+```
+
+**Read:**
+
+```python
+# Get all records
+all_authors = Author.objects.all()
+
+# Get a single record (raises DoesNotExist if not found)
+author = Author.objects.get(id=1)
+
+# Get first/last
+first_author = Author.objects.first()
+last_author = Author.objects.last()
+
+# Filtering
+authors_named_jane = Author.objects.filter(name="Jane Doe")
+authors_excluding_john = Author.objects.exclude(name="John Smith")
+```
+
+**Update:**
+
+```python
+# Update one record and save
+author = Author.objects.get(id=1)
+author.name = "Jane Roe"
+author.save()
+
+# Bulk update
+Author.objects.filter(name="Old Name").update(name="New Name")
+```
+
+**Delete:**
+
+```python
+# Delete a single object
+author = Author.objects.get(id=1)
+author.delete()
+
+# Bulk delete
+Author.objects.filter(name="Unwanted").delete()
+```
+
+⚠️ **Warning:** `get()` raises `DoesNotExist` if no object matches, and `MultipleObjectsReturned` if more than one. Always handle these exceptions or use `filter().first()` when unsure.
+
+### 7.2.3 Using the Django Shell for Data Exploration
+
+The Django shell is an interactive environment to test queries and explore data.
+
+```bash
+python manage.py shell
+```
+
+Or with `django-extensions` (install and add to `INSTALLED_APPS`) you get `shell_plus` which auto‑imports all models:
+
+```bash
+python manage.py shell_plus
+```
+
+**Example session:**
+
+```python
+>>> from myapp.models import Author, Post
+>>> Author.objects.all()
+<QuerySet [<Author: Jane Doe>, <Author: John Smith>]>
+>>> jane = Author.objects.get(name="Jane Doe")
+>>> jane.posts.create(title="First Post", content="Hello world!")
+<Post: First Post>
+>>> Post.objects.filter(author__name="Jane Doe")
+<QuerySet [<Post: First Post>]>
+```
+
+### 7.2.4 Complex Lookups with `filter()`, `exclude()`, `Q` objects, and `F` expressions
+
+**Field lookups** are specified using double underscores:
+
+- `exact`, `iexact` – case‑sensitive/insensitive exact match.
+- `contains`, `icontains` – substring match.
+- `in` – value in a given list.
+- `gt`, `gte`, `lt`, `lte` – greater than, etc.
+- `startswith`, `endswith`, `istartswith`, `iendswith`.
+- `range` – between two values (inclusive).
+- `date`, `year`, `month`, `day`, `week_day`, `time`, etc. for date/time fields.
+- `isnull` – check for `NULL`.
+
+**Examples:**
+
+```python
+# Posts published in 2023
+Post.objects.filter(created_at__year=2023)
+
+# Authors whose name contains 'doe' (case‑insensitive)
+Author.objects.filter(name__icontains="doe")
+
+# Posts with id in a list
+Post.objects.filter(id__in=[1,3,5])
+
+# Posts created between two dates
+from datetime import date
+Post.objects.filter(created_at__date__range=[date(2023,1,1), date(2023,12,31)])
+```
+
+**Chaining filters** – each returns a new `QuerySet`:
+
+```python
+posts = Post.objects.filter(published=True).exclude(author__name="John Smith")
+```
+
+**Q objects** allow complex queries with OR and NOT logic:
+
+```python
+from django.db.models import Q
+
+# Posts by Jane OR posts with 'Django' in title
+posts = Post.objects.filter(
+    Q(author__name="Jane Doe") | Q(title__icontains="Django")
+)
+
+# Posts by Jane AND NOT published
+posts = Post.objects.filter(
+    Q(author__name="Jane Doe") & ~Q(published=True)
+)
+```
+
+**F expressions** refer to model field values and let you do database‑side operations without pulling data into Python:
+
+```python
+from django.db.models import F
+
+# Increment a counter
+Post.objects.filter(id=1).update(views=F('views') + 1)
+
+# Compare fields: authors whose name equals their email (unlikely)
+Author.objects.filter(name=F('email'))
+```
+
+**Aggregation and annotation** (brief intro):
+
+- `aggregate()` returns a dictionary of summary values (e.g., `Count`, `Sum`, `Avg`).
+- `annotate()` adds computed fields to each object in a queryset.
+
+```python
+from django.db.models import Count, Avg
+
+# Total number of posts
+total = Post.objects.aggregate(total_posts=Count('id'))
+
+# Annotate each author with the number of posts they've written
+authors = Author.objects.annotate(post_count=Count('posts'))
+```
+
+⚠️ **Performance tip:** Use `select_related` (for `ForeignKey`) and `prefetch_related` (for `ManyToManyField`) to avoid the N+1 query problem. These are essential in production APIs and views.
+
+## 7.3 Model Relationships
+
+### 7.3.1 One-to-Many: ForeignKey
+
+A `ForeignKey` defines a many‑to‑one relationship. In our blog, one author can have many posts.
+
+**Definition:**
+
+```python
+class Post(models.Model):
+    author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name='posts')
+    # ... other fields
+```
+
+- **`related_name`** is the name of the reverse relation from `Author` to `Post`. It allows `author.posts.all()`.
+- If you don’t provide `related_name`, Django defaults to `post_set` (i.e., `author.post_set.all()`).
+
+**Accessing related objects:**
+
+```python
+# Forward: from post to author
+post = Post.objects.get(id=1)
+author_name = post.author.name
+
+# Reverse: from author to posts
+author = Author.objects.get(id=1)
+posts = author.posts.all()          # using related_name
+```
+
+**Creating related objects:**
+
+```python
+# Method 1: assign ForeignKey
+post = Post(title="New Post", author=author)
+post.save()
+
+# Method 2: use related manager
+author.posts.create(title="Another Post", content="...")
+```
+
+**`on_delete` choices** are critical. `CASCADE` is common for dependencies (e.g., posts deleted when author is deleted). `PROTECT` prevents deletion if posts exist. Choose based on business logic.
+
+⚠️ **Best practices:**
+- Always give a meaningful `related_name` (plural for many side).
+- For `ForeignKey` fields that are optional, set `null=True, blank=True`.
+- Consider `db_index=True` on foreign keys; Django does this automatically.
+
+### 7.3.2 Many-to-Many: ManyToManyField
+
+A `ManyToManyField` represents a many‑to‑many relationship. Posts can have many tags, tags can belong to many posts.
+
+**Definition:**
+
+```python
+class Post(models.Model):
+    tags = models.ManyToManyField(Tag, related_name='posts')
+    # ... other fields
+```
+
+Django automatically creates an intermediate table (join table) to link posts and tags.
+
+**Using the relationship:**
+
+```python
+# Add tags to a post
+post = Post.objects.get(id=1)
+tag1 = Tag.objects.get(name="Django")
+tag2 = Tag.objects.get(name="Python")
+post.tags.add(tag1, tag2)
+
+# Remove tags
+post.tags.remove(tag1)
+
+# Clear all tags
+post.tags.clear()
+
+# List tags of a post
+tags = post.tags.all()
+
+# List posts for a tag
+tag = Tag.objects.get(name="Django")
+posts_with_tag = tag.posts.all()      # via related_name
+```
+
+**Through model (intermediate table with extra fields):**
+
+Sometimes you need extra data on the relationship, e.g., the date a tag was added to a post.
+
+```python
+class PostTag(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
+    added_at = models.DateTimeField(auto_now_add=True)
+
+class Post(models.Model):
+    tags = models.ManyToManyField(Tag, through='PostTag')
+```
+
+Then you add relationships by creating `PostTag` objects:
+
+```python
+PostTag.objects.create(post=post, tag=tag)
+```
+
+**Symmetrical option** for self‑referential many‑to‑many (e.g., friends). Set `symmetrical=False` to create a directed relationship.
+
+### 7.3.3 One-to-One: OneToOneField
+
+A `OneToOneField` is like a `ForeignKey` with `unique=True`, but the reverse side returns a single object instead of a manager. It’s often used to extend the built‑in `User` model.
+
+**Example: User Profile**
+
+```python
+from django.contrib.auth.models import User
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    bio = models.TextField(blank=True)
+    birth_date = models.DateField(null=True, blank=True)
+    location = models.CharField(max_length=100, blank=True)
+```
+
+**Accessing:**
+
+```python
+# Get profile of a user
+profile = user.profile   # using related_name
+
+# Get user from profile
+user = profile.user
+```
+
+**Creating automatically with signals:**
+
+To ensure every user gets a profile, use a `post_save` signal:
+
+```python
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    instance.profile.save()
+```
+
+**Use cases for `OneToOneField`:**
+- Extending a model with optional or sensitive data (e.g., user profile with payment info).
+- Creating a primary key relationship where two tables are tightly coupled.
+
+⚠️ **Best practices:**
+- Use `OneToOneField` instead of a `ForeignKey` with `unique=True` when you need the reverse side to be a single object.
+- Signals are powerful but can make code harder to debug; consider alternative approaches if the logic is simple (e.g., create profile in view when user registers).
+
+---
+
+## Real‑World Backend Relevance
+
+- **Database indexing** – In production, as data grows, indexes become crucial. Django’s `db_index` and `Meta.indexes` let you optimise queries.
+- **Connection pooling** – Use `CONN_MAX_AGE` in `DATABASES` to keep database connections alive, reducing overhead.
+- **Read replicas** – For high‑traffic apps, you might configure multiple databases and route read queries to replicas.
+- **Migrations in production** – Always backup before migrating. Use tools like `django‑migration‑linter` to catch backward‑incompatible changes.
+- **Security** – Never expose database credentials. Use environment variables and restrict database user privileges.
+
+## Common Mistakes
+
+- **Forgetting to run migrations** after model changes – leads to inconsistencies.
+- **Using `get()` without try/except** – causes 500 errors if object doesn’t exist.
+- **N+1 queries** – fetching related objects in a loop. Use `select_related`/`prefetch_related`.
+- **Overusing signals** – can create hidden dependencies and performance issues.
+- **Not setting `on_delete`** – Django 2.0+ requires it; choose deliberately.
+- **Hard‑coding database credentials** – a major security risk.
+
+---
+
+These notes cover the core of Django’s database layer. Mastery of the ORM and data modeling is essential for building scalable, maintainable backend systems. Practice by building a small project (e.g., a blog or a task manager) and experimenting with all the query methods.
+```
