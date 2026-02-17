@@ -1,0 +1,440 @@
+# Django ORM - Complete Notes
+
+## What is ORM?
+
+**ORM** stands for **Object-Relational Mapping**. It's a programming technique that allows you to interact with a relational database using object-oriented programming concepts.
+
+Instead of writing raw SQL queries, you work with Python objects and methods that Django converts to SQL behind the scenes.
+
+---
+
+## Django ORM Definition
+
+**Django ORM** is Django's built-in database abstraction API that lets you:
+- Create, retrieve, update, and delete database records
+- Define database structure using Python classes (models)
+- Write database queries using Python code instead of SQL
+
+---
+
+## Key Concepts
+
+### 1. Models
+Models are Python classes that represent database tables.
+
+```python
+from django.db import models
+
+class Book(models.Model):
+    title = models.CharField(max_length=200)
+    author = models.CharField(max_length=100)
+    published_date = models.DateField()
+    price = models.DecimalField(max_digits=5, decimal_places=2)
+    
+    def __str__(self):
+        return self.title
+```
+
+This creates a database table `books_book` with columns:
+- `id` (automatically added as primary key)
+- `title`
+- `author`
+- `published_date`
+- `price`
+
+---
+
+### 2. Field Types
+Django provides various field types mapping to database column types:
+
+| Django Field | Database Type | Usage |
+|-------------|---------------|-------|
+| `CharField` | VARCHAR | Short strings |
+| `TextField` | TEXT | Long text |
+| `IntegerField` | INTEGER | Whole numbers |
+| `FloatField` | FLOAT | Decimal numbers |
+| `DecimalField` | DECIMAL | Precise decimals (money) |
+| `BooleanField` | BOOLEAN | True/False |
+| `DateField` | DATE | Date only |
+| `DateTimeField` | DATETIME | Date and time |
+| `EmailField` | VARCHAR | Email validation |
+| `URLField` | VARCHAR | URL validation |
+| `ForeignKey` | INTEGER | Many-to-one relation |
+| `ManyToManyField` | Junction table | Many-to-many relation |
+| `OneToOneField` | INTEGER | One-to-one relation |
+
+---
+
+### 3. Basic CRUD Operations
+
+#### CREATE (Insert)
+```python
+# Method 1: Create and save separately
+book = Book(title="Django for Beginners", author="John Doe", price=29.99)
+book.save()
+
+# Method 2: Create using create() method
+book = Book.objects.create(
+    title="Advanced Django", 
+    author="Jane Smith", 
+    price=39.99
+)
+
+# Method 3: get_or_create (avoids duplicates)
+book, created = Book.objects.get_or_create(
+    title="Django ORM Mastery",
+    defaults={'author': 'Bob Wilson', 'price': 49.99}
+)
+# created will be True if new object was created
+```
+
+#### READ (Select)
+```python
+# Get all books
+all_books = Book.objects.all()
+
+# Get single book by primary key
+book = Book.objects.get(id=1)
+
+# Filter books (WHERE clause)
+expensive_books = Book.objects.filter(price__gt=30)
+
+# Exclude certain books (NOT condition)
+cheap_books = Book.objects.exclude(price__gt=30)
+
+# Chain filters
+recent_expensive = Book.objects.filter(
+    published_date__year=2023
+).filter(price__gt=25)
+
+# Get first/last
+first_book = Book.objects.first()
+last_book = Book.objects.last()
+
+# Count records
+book_count = Book.objects.count()
+
+# Check existence
+exists = Book.objects.filter(title="Django").exists()
+```
+
+#### UPDATE
+```python
+# Update a single record
+book = Book.objects.get(id=1)
+book.price = 34.99
+book.save()
+
+# Update multiple records (bulk update)
+Book.objects.filter(author="John Doe").update(price=24.99)
+
+# Update using F expressions (relative updates)
+from django.db.models import F
+Book.objects.filter(price__lt=20).update(price=F('price') * 1.1)  # 10% increase
+```
+
+#### DELETE
+```python
+# Delete a single record
+book = Book.objects.get(id=1)
+book.delete()
+
+# Delete multiple records
+Book.objects.filter(price__lt=10).delete()
+
+# Delete all records (be careful!)
+Book.objects.all().delete()
+```
+
+---
+
+### 4. Query Operations (Lookups)
+
+Django provides field lookups for filtering:
+
+```python
+# Comparison operators
+books = Book.objects.filter(price__gt=20)      # greater than
+books = Book.objects.filter(price__gte=20)     # greater than or equal
+books = Book.objects.filter(price__lt=30)      # less than
+books = Book.objects.filter(price__lte=30)     # less than or equal
+books = Book.objects.filter(price__exact=25)   # equal to
+books = Book.objects.filter(price__isnull=True) # is null
+
+# String operations
+books = Book.objects.filter(title__contains="Django")     # contains
+books = Book.objects.filter(title__icontains="django")    # case-insensitive contains
+books = Book.objects.filter(title__startswith="The")      # starts with
+books = Book.objects.filter(title__endswith="Guide")      # ends with
+books = Book.objects.filter(title__in=["Book1", "Book2"]) # in list
+
+# Date operations
+from datetime import date, timedelta
+today = date.today()
+last_week = today - timedelta(days=7)
+
+books = Book.objects.filter(published_date__year=2023)
+books = Book.objects.filter(published_date__month=6)
+books = Book.objects.filter(published_date__day=15)
+books = Book.objects.filter(published_date__gte=last_week)
+books = Book.objects.filter(published_date__range=[last_week, today])
+```
+
+---
+
+### 5. Relationships
+
+#### Many-to-One (ForeignKey)
+```python
+class Author(models.Model):
+    name = models.CharField(max_length=100)
+    email = models.EmailField()
+
+class Book(models.Model):
+    title = models.CharField(max_length=200)
+    author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name='books')
+    
+# Usage
+author = Author.objects.create(name="John Doe")
+book = Book.objects.create(title="My Book", author=author)
+
+# Access from book to author
+book_author = book.author
+
+# Access from author to books (reverse relation)
+authors_books = author.books.all()
+```
+
+#### Many-to-Many
+```python
+class Book(models.Model):
+    title = models.CharField(max_length=200)
+
+class Category(models.Model):
+    name = models.CharField(max_length=50)
+    books = models.ManyToManyField(Book, related_name='categories')
+
+# Usage
+book = Book.objects.create(title="Python Book")
+category1 = Category.objects.create(name="Programming")
+category2 = Category.objects.create(name="Technology")
+
+# Add relationships
+category1.books.add(book)
+book.categories.add(category2)  # Both ways work
+
+# Query
+books_in_programming = Category.objects.get(name="Programming").books.all()
+categories_of_book = book.categories.all()
+```
+
+#### One-to-One
+```python
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    bio = models.TextField()
+    website = models.URLField()
+
+# Access
+profile = user.userprofile
+user = profile.user
+```
+
+---
+
+### 6. Advanced Querying
+
+#### Aggregation
+```python
+from django.db.models import Count, Sum, Avg, Max, Min
+
+# Get statistics
+total_books = Book.objects.count()
+avg_price = Book.objects.aggregate(Avg('price'))
+max_price = Book.objects.aggregate(Max('price'))
+total_value = Book.objects.aggregate(Sum('price'))
+
+# Group by author
+author_stats = Author.objects.annotate(
+    book_count=Count('books'),
+    avg_price=Avg('books__price')
+)
+```
+
+#### Select Related and Prefetch Related (Performance)
+```python
+# select_related - for ForeignKey (SQL JOIN)
+books = Book.objects.select_related('author').all()
+# One query instead of N+1 queries
+
+# prefetch_related - for ManyToMany and reverse relations
+authors = Author.objects.prefetch_related('books').all()
+# Two queries optimized
+```
+
+#### Q Objects (Complex queries)
+```python
+from django.db.models import Q
+
+# OR conditions
+books = Book.objects.filter(
+    Q(price__lt=20) | Q(price__gt=50)
+)
+
+# AND conditions (implied)
+books = Book.objects.filter(
+    Q(author="John") & Q(price__lt=30)
+)
+
+# NOT condition
+books = Book.objects.filter(
+    ~Q(author="John")
+)
+
+# Complex combinations
+books = Book.objects.filter(
+    Q(title__contains="Django") | 
+    Q(title__contains="Python"),
+    price__gt=20
+)
+```
+
+---
+
+### 7. Migrations
+
+Migrations are Django's way of propagating model changes to the database schema.
+
+```bash
+# Create migrations (detect model changes)
+python manage.py makemigrations
+
+# Apply migrations to database
+python manage.py migrate
+
+# Show migration status
+python manage.py showmigrations
+
+# SQL for a migration (without running)
+python manage.py sqlmigrate app_name 0001
+```
+
+---
+
+### 8. Transactions
+
+```python
+from django.db import transaction
+
+# Decorator approach
+@transaction.atomic
+def create_book_and_author():
+    author = Author.objects.create(name="John")
+    book = Book.objects.create(title="Book", author=author)
+    # If anything fails, both are rolled back
+
+# Context manager approach
+def transfer_money():
+    try:
+        with transaction.atomic():
+            # All database operations here are atomic
+            account1.balance -= 100
+            account1.save()
+            account2.balance += 100
+            account2.save()
+    except Exception:
+        # Transaction rolled back automatically
+        pass
+```
+
+---
+
+### 9. Raw SQL (When needed)
+
+```python
+# Raw query returning model instances
+books = Book.objects.raw('SELECT * FROM books_book WHERE price > %s', [20])
+
+# Raw query returning dictionaries
+from django.db import connection
+with connection.cursor() as cursor:
+    cursor.execute("SELECT title, price FROM books_book WHERE price > %s", [20])
+    rows = cursor.fetchall()
+```
+
+---
+
+## Advantages of Django ORM
+
+1. **Database agnostic** – Switch databases (PostgreSQL, MySQL, SQLite) without changing code
+2. **Security** – Automatically prevents SQL injection
+3. **Productivity** – Write Python instead of SQL
+4. **Portability** – Models work across different databases
+5. **Relationship management** – Easy handling of complex relations
+6. **Migration system** – Version control for database schema
+7. **Caching** – Built-in query caching
+8. **Lazy evaluation** – Queries executed only when needed
+
+---
+
+## Disadvantages
+
+1. **Complex queries** – Very complex SQL may be harder to express
+2. **Performance overhead** – Slightly slower than raw SQL
+3. **Learning curve** – Must learn ORM-specific syntax
+4. **Hidden complexity** – Generated SQL may be inefficigo_model_to_communicate_withent if not careful
+
+---
+
+## Best Practices
+
+1. **Use `select_related` and `prefetch_related`** to avoid N+1 queries
+2. **Use `only()` and `defer()`** to limit fetched columns
+3. **Use `values()` and `values_list()`** when you only need specific fields
+4. **Use `bulk_create()` and `bulk_update()`** for multiple records
+5. **Use `F()` expressions** for atomic updates
+6. **Keep queries in managers or querysets**, not views
+7. **Use transactions** for operations that should be atomic
+8. **Index your database** on frequently queried fields
+
+---
+
+## Quick Reference - Common Operations
+
+```python
+# Create
+obj = Model(field1=value1)
+obj.save()
+# or
+obj = Model.objects.create(field1=value1)
+
+# Read
+all = Model.objects.all()
+filtered = Model.objects.filter(field=value)
+single = Model.objects.get(id=1)
+
+# Update
+obj.field = new_value
+obj.save()
+# or
+Model.objects.filter(field=value).update(field=new_value)
+
+# Delete
+obj.delete()
+# or
+Model.objects.filter(field=value).delete()
+
+# Ordering
+ordered = Model.objects.order_by('field')
+reverse = Model.objects.order_by('-field')
+
+# Limiting
+first_five = Model.objects.all()[:5]
+
+# Field selection
+names_only = Model.objects.values_list('name', flat=True)
+```
+
+---
+
+**Summary:** Django ORM is a powerful tool that abstracts database operations into Python code, making database interactions intuitive, secure, and database-agnostic while maintaining the ability to execute complex queries when needed.

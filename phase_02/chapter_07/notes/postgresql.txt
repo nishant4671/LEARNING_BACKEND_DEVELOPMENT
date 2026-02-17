@@ -1,0 +1,47 @@
+🅰 Micro-Lesson — What Is PostgreSQL Really?
+
+PostgreSQL is:
+
+A powerful open-source relational database management system (RDBMS).
+
+Break that down:
+
+Relational → Data is stored in tables.
+
+Tables → Made of rows and columns.
+
+Rows → Individual records.
+
+Columns → Defined structure (schema).
+
+Example:
+
+id	name	skill
+1	Nishant	Python
+2	Aarav	React
+
+That is a table.
+
+Now here is the crucial insight:
+
+👉 Django does NOT store data.
+👉 Django defines models.
+👉 PostgreSQL stores the actual rows on disk.
+
+Django ORM translates:
+
+Student.objects.all()
+
+
+Into:
+
+SELECT * FROM student;
+
+
+And sends that to PostgreSQL.
+
+PostgreSQL executes it.
+Returns the result.
+Django converts it back into Python objects.
+
+That translation layer = ORM (Object Relational Mapper).

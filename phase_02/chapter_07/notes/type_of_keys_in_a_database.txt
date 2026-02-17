@@ -1,0 +1,272 @@
+Here are comprehensive notes about all the main **types of keys in a database**:
+
+---
+
+# DATABASE KEYS - Complete Notes
+
+## 1. SUPER KEY
+**Definition:** A super key is a set of one or more attributes (columns) that can uniquely identify a record (row) in a table.
+
+**Characteristics:**
+- May contain extra attributes that aren't strictly necessary for uniqueness
+- Every table must have at least one super key
+- Can be a single attribute or combination of attributes
+
+**Example:**
+```
+Student Table: (Student_ID, Name, Email, Phone)
+Super Keys could be:
+- Student_ID (alone)
+- Email (alone)
+- Phone (alone)
+- (Student_ID + Name)
+- (Email + Phone)
+- (Student_ID + Email + Name + Phone) - whole table
+```
+
+---
+
+## 2. CANDIDATE KEY
+**Definition:** A candidate key is a minimal super key – meaning it has no redundant attributes. It's a super key from which you cannot remove any attribute and still have uniqueness.
+
+**Characteristics:**
+- Minimal super key (no unnecessary attributes)
+- Must uniquely identify each record
+- Must be non-null (cannot contain NULL values)
+- Must be unique across all records
+- A table can have multiple candidate keys
+
+**Example:**
+```
+From above Student Table:
+Candidate Keys (minimal super keys):
+- Student_ID (minimal)
+- Email (minimal)
+- Phone (minimal)
+
+(Student_ID + Name) is NOT a candidate key because Name is redundant – Student_ID alone is enough
+```
+
+---
+
+## 3. PRIMARY KEY
+**Definition:** A primary key is a candidate key chosen by the database designer to uniquely identify each record in the table.
+
+**Characteristics:**
+- Must be unique for each row
+- Cannot contain NULL values
+- Only ONE primary key per table
+- Automatically creates a clustered index (in most DBMS)
+- Values should rarely (ideally never) change
+
+**Rules:**
+- Uniquely identifies each record
+- Cannot be NULL
+- Must be stable (not frequently updated)
+
+**Example:**
+```sql
+CREATE TABLE Student (
+    Student_ID INT PRIMARY KEY,
+    Name VARCHAR(100),
+    Email VARCHAR(100) UNIQUE
+);
+-- Student_ID is the primary key
+```
+
+---
+
+## 4. FOREIGN KEY
+**Definition:** A foreign key is an attribute in one table that references the primary key of another table. It establishes a relationship between two tables.
+
+**Characteristics:**
+- Can contain NULL values
+- Can have duplicate values
+- A table can have multiple foreign keys
+- References a primary key in another table
+- Enforces referential integrity
+
+**Referential Integrity Rules:**
+- **RESTRICT:** Prevents deletion/update of referenced record
+- **CASCADE:** Deletes/updates related records automatically
+- **SET NULL:** Sets foreign key to NULL if referenced record is deleted
+- **NO ACTION:** Similar to RESTRICT (syntax varies by DBMS)
+
+**Example:**
+```sql
+CREATE TABLE Orders (
+    Order_ID INT PRIMARY KEY,
+    Order_Date DATE,
+    Customer_ID INT,
+    FOREIGN KEY (Customer_ID) REFERENCES Customers(Customer_ID)
+);
+```
+
+---
+
+## 5. ALTERNATE KEY
+**Definition:** Alternate keys are the candidate keys that were NOT chosen as the primary key.
+
+**Characteristics:**
+- Are candidate keys (minimal and unique)
+- Could have been the primary key but weren't selected
+- Also called secondary keys
+
+**Example:**
+```
+Student Table:
+Candidate Keys: Student_ID, Email, Phone
+Primary Key chosen: Student_ID
+Alternate Keys: Email, Phone
+```
+
+---
+
+## 6. COMPOSITE KEY
+**Definition:** A composite key is a key that consists of two or more attributes that together uniquely identify a record.
+
+**Characteristics:**
+- Made up of multiple columns
+- Can be a primary key, candidate key, or foreign key
+- Each column individually may not be unique, but the combination is unique
+
+**Example:**
+```sql
+CREATE TABLE Enrollment (
+    Student_ID INT,
+    Course_ID INT,
+    Enrollment_Date DATE,
+    PRIMARY KEY (Student_ID, Course_ID)  -- Composite Primary Key
+);
+```
+
+---
+
+## 7. COMPOUND KEY
+**Definition:** Similar to composite key, but specifically refers to a key where each attribute is itself a foreign key.
+
+**Example:**
+```sql
+-- If Student_ID references Student table
+-- and Course_ID references Course table
+-- Then (Student_ID, Course_ID) is a compound key
+```
+
+---
+
+## 8. SURROGATE KEY
+**Definition:** A surrogate key is an artificially created key (usually an auto-incrementing integer) that has no business meaning – it exists only for identification.
+
+**Characteristics:**
+- Has no business meaning (artificial)
+- Usually system-generated (auto-increment, UUID, GUID)
+- Never changes once assigned
+- Hidden from users/application
+- Ensures uniqueness regardless of business rules
+
+**Advantages:**
+- Stable (never changes)
+- Performance (integers are fast to index)
+- Not affected by business rule changes
+
+**Disadvantages:**
+- No business meaning (can hide data quality issues)
+- Requires join to get meaningful information
+
+**Example:**
+```sql
+CREATE TABLE Employee (
+    Employee_ID INT AUTO_INCREMENT PRIMARY KEY,  -- Surrogate key
+    SSN VARCHAR(11) UNIQUE,                       -- Natural key
+    Name VARCHAR(100)
+);
+```
+
+---
+
+## 9. NATURAL KEY
+**Definition:** A natural key is a key that exists naturally in the real world and has business meaning.
+
+**Characteristics:**
+- Has business meaning
+- Exists in the real world
+- Can be used as a primary key
+
+**Examples:**
+- SSN (Social Security Number)
+- ISBN (for books)
+- Email address
+- Vehicle VIN
+- Product SKU
+
+**Disadvantages:**
+- May change over time
+- May not always be unique
+- May be long/complex
+- Business rules may change
+
+---
+
+## 10. SIMPLE KEY
+**Definition:** A key that consists of only one attribute to uniquely identify records.
+
+**Example:**
+```sql
+CREATE TABLE Product (
+    Product_ID INT PRIMARY KEY,  -- Simple key
+    Product_Name VARCHAR(100)
+);
+```
+
+---
+
+## 11. CANDIDATE vs PRIMARY vs ALTERNATE Keys - Comparison Table
+
+| Key Type | Uniqueness | NULL allowed | Number per table | Selected from |
+|----------|------------|--------------|------------------|---------------|
+| Candidate | Yes | No | Multiple | All minimal super keys |
+| Primary | Yes | No | One | Candidate keys |
+| Alternate | Yes | No | Multiple | Candidate keys not chosen as primary |
+
+---
+
+## 12. UNIQUE KEY
+**Definition:** A constraint that ensures all values in a column or set of columns are unique.
+
+**Difference from Primary Key:**
+- Can have NULL values (usually only one NULL allowed)
+- Can have multiple unique keys per table
+- Creates a non-clustered index (usually)
+
+**Example:**
+```sql
+CREATE TABLE User (
+    User_ID INT PRIMARY KEY,
+    Username VARCHAR(50) UNIQUE,
+    Email VARCHAR(100) UNIQUE
+);
+```
+
+---
+
+## Summary Table
+
+| Key Type | Purpose | Nullable | Unique | Quantity per table |
+|----------|---------|----------|--------|-------------------|
+| Super Key | Identify records uniquely | No | Yes | Multiple |
+| Candidate Key | Minimal super key for identification | No | Yes | Multiple |
+| Primary Key | Main identifier for table | No | Yes | One |
+| Foreign Key | Link tables together | Yes | No | Multiple |
+| Alternate Key | Candidate keys not chosen as PK | No | Yes | Multiple |
+| Composite Key | Key with multiple columns | No | Yes | One |
+| Surrogate Key | Artificial system-generated key | No | Yes | One |
+| Natural Key | Real-world meaningful key | No | Yes | One |
+| Unique Key | Enforce uniqueness | Yes (one null) | Yes | Multiple |
+
+---
+
+**Key Takeaway:** Understanding these keys is fundamental to:
+- Database design (normalization)
+- Query optimization (indexing)
+- Data integrity (referential integrity)
+- Relationship mapping (ER diagrams)

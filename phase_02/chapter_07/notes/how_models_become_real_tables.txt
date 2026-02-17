@@ -1,0 +1,65 @@
+Migrations — How Models Become Real Tables
+🅰 Micro-Lesson
+
+When you write:
+
+class Student(models.Model):
+
+
+You only define a blueprint.
+
+Nothing exists in the database yet.
+
+Django needs to:
+
+Compare your current models
+
+Compare previous state
+
+Generate SQL commands
+
+Execute them in PostgreSQL
+
+This happens in two steps:
+
+Step 1:
+python manage.py makemigrations
+
+
+This:
+
+Detects model changes
+
+Creates a migration file (Python file)
+
+Stores it inside migrations/
+
+Think of it as:
+
+“Django writing down what needs to change.”
+
+Step 2:
+python manage.py migrate
+
+
+This:
+
+Reads migration files
+
+Converts them into SQL
+
+Sends SQL to PostgreSQL
+
+Creates/updates tables
+
+Think of it as:
+
+“Actually applying the blueprint.”
+
+Critical Understanding
+
+Models → Migration files → SQL → Database Tables
+
+Not:
+
+Models → Database directly.
